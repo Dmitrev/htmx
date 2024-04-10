@@ -10,19 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 )
-
-type Transaction struct {
-    Id int
-    Amount int
-    Date string
-    Description string
-    Payee string
-    Address string
-    Category string
-}
 
 func (t *Transaction) ToMoney() string {
     return formatMoney(t.Amount)
@@ -33,16 +22,6 @@ func formatMoney(money int) string {
     formatted := strconv.FormatFloat(amount, 'f', 2, 64)
 
     return fmt.Sprintf("£%s", formatted)
-}
-
-type TransactionData struct {
-    Title string
-    Total string
-    Transactions []*Transaction
-}
-
-type PageData struct {
-    Errors map[string]string
 }
 
 func check(err error) {
@@ -65,7 +44,7 @@ func main() {
 }
 
 func startWebServer() {
-    d, err := sql.Open("sqlite3", "htmx.db")
+    d, err := sql.Open("mysql", "user:pass@/database")
     db = d
     
     check(err)
@@ -74,8 +53,9 @@ func startWebServer() {
     check(err)
 
     http.HandleFunc("/", getRoot)  
-    http.HandleFunc("/store", postStore)  
     http.HandleFunc("/transactions", getTransactions)  
+    http.HandleFunc("/store", postStore)  
+    http.HandleFunc("/component-transactions", getComponentTransactions)  
     http.HandleFunc("/clicked", getClicked)
     http.HandleFunc("/hello", getHello)  
     http.HandleFunc("/delete/", deleteTransaction)  
@@ -90,16 +70,29 @@ func startWebServer() {
 }
 
 func getRoot(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("Caught in ROOT")
     logRequest(r)
     if r.URL.Path != "/" {
 	http.NotFound(w, r)
 	return
     }
 
+
+    tmpl := template.Must(template.ParseFiles("html/index.html", "html/partials/index.html"))
+
+    nav := getNav(r.URL.Path)
+    data := PageData{"Home", nav, nil}
+    err := tmpl.ExecuteTemplate(w, "index", data)
+    check(err)
+}
+
+func getTransactions(w http.ResponseWriter, r *http.Request) {
+    logRequest(r)
     tmpl := template.Must(template.ParseFiles("html/index.html", "html/partials/create-transaction.html"))
-    tmpl.ExecuteTemplate(w, "index", nil)
-    // serveFile(w, r, "html/index.html")
+
+    nav := getNav(r.URL.Path)
+    data := PageData{"Transactions", nav, nil}
+    err := tmpl.ExecuteTemplate(w, "index", data)
+    check(err)
 }
 
 func getClicked(w http.ResponseWriter, r *http.Request) {
@@ -110,6 +103,16 @@ func getClicked(w http.ResponseWriter, r *http.Request) {
 func getHello(w http.ResponseWriter, r *http.Request) {
     serveResponse(w, "Hello, HTTP! \n")
     logRequest(r)
+}
+
+
+func getNav(path string) Nav {
+    return Nav {
+	Items: []*NavItem {
+	    {"Home", "/", path == "/"},
+	    {"Transactions", "/transactions", path == "/transactions"},
+	},
+    }
 }
 
 func postStore(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +138,8 @@ func postStore(w http.ResponseWriter, r *http.Request) {
     if len(errors) > 0 {
 	fmt.Println("validation errors")
 	// If has errors return form with errors
-	data := PageData{errors}
+	nav := getNav(r.URL.Path)
+	data := PageData{"Page", nav, errors}
 	err := tmpl.ExecuteTemplate(w, "create-transaction", data)
 
 	check(err)
@@ -168,29 +172,53 @@ func truncate(w http.ResponseWriter, r *http.Request) {
 
     _, err := db.Exec("DELETE FROM transactions")
     check(err)
+    w.Header().Add("HX-Trigger", "new-transactions")
     serveResponse(w, "ok")
 }
 
 func postImport(w http.ResponseWriter, r *http.Request) {
+    logRequest(r)
     if r.Method != "POST" {
 	errMethodNotAllowed(w)
 	return
     }
 
-    transactions, err := OpenFile("monzo.qif")
-    check(err)
+    err := r.ParseMultipartForm(100 * 1024 * 1024)
+    if err != nil {
+	errBadRequest(w, err.Error())
+	return
+    }
 
+    file, fileHeader, err := r.FormFile("file")
+    if err != nil {
+	errBadRequest(w, err.Error())
+	return
+    }
+
+    bytes := make([]byte, fileHeader.Size)
+
+    n, err := file.Read(bytes)
+
+    fileContent := string(bytes[:])
+
+    fmt.Printf("%#v\n", n)
+    fmt.Printf("%#v\n", err)
+    fmt.Printf("%s\n", fileContent)
+
+    transactions, err := ReadTransactions(fileContent)
+    check(err)
+	//
     for _, transaction := range transactions {
-	// fmt.Printf("%#v\n", transaction)
+	fmt.Printf("%#v\n", transaction)
 	stmt, err := db.Prepare("INSERT INTO transactions (amount, date, description, payee, address, category) VALUES (?, ?, ?, ?, ?, ?)")
 	check(err)
-	
-	date := transaction.Date.Format(time.DateOnly)
 
+	date := transaction.Date.Format(time.DateOnly)
 	_, err = stmt.Exec(transaction.Amount, date, transaction.Memo, transaction.Payee, transaction.Address, transaction.Category)
 	check(err)
     }
 
+    w.Header().Add("HX-Trigger", "new-transactions")
     serveResponse(w, "ok")
 }
 
@@ -236,9 +264,9 @@ func deleteTransaction(w http.ResponseWriter, r *http.Request) {
     check(err)
 }
 
-func getTransactions(w http.ResponseWriter, r *http.Request) {
+func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
     // logRequest(r)
-    rows, err := db.Query("SELECT * FROM transactions") 
+    rows, err := db.Query("SELECT * FROM transactions order by date DESC") 
 
     check(err)
     
@@ -249,19 +277,34 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	var id int
 	var amount int
 	var date, description, payee, address, category string
+	var createdAt, updatedAt sql.NullString
 
-	rows.Scan(&id, &amount, &date, &description, &payee, &address, &category)
+	err := rows.Scan(&id, &amount, &date, &description, &payee, &address, &category, &createdAt, &updatedAt)
+	if err != nil {
+	    check(err)
+	}
 
 	total += amount
 
-	t := &Transaction{id, amount, date, description, payee, address, category}
+
+	createdAtString := ""
+	if createdAt.Valid {
+	    createdAtString = createdAt.String
+	}
+
+	updatedAtString := ""
+	if updatedAt.Valid {
+	    updatedAtString = createdAt.String
+	}
+
+	t := &Transaction{id, amount, date, description, payee, address, category, createdAtString, updatedAtString}
 	transactions = append(transactions, t)
     }
 
     totalFormatted := formatMoney(total)
 
     tmpl := template.Must(template.ParseFiles("html/partials/transactions.html"))
-    data := TransactionData{"title testing", totalFormatted, transactions}
+    data := TransactionData{totalFormatted, transactions}
 
     err = tmpl.Execute(w, data)
     check(err)

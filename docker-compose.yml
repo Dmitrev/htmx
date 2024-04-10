@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  db:
+    image: mariadb
+    restart: always
+    environment:
+      MARIADB_USER: user
+      MARIADB_PASSWORD: pass
+      MARIADB_DATABASE: database
+      MARIADB_ROOT_PASSWORD: example
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - 3306
+volumes:
+  db-data:

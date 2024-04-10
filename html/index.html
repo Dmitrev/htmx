@@ -4,13 +4,21 @@
     <head>
         <title>HTMX test</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script defer src="https://unpkg.com/htmx.org@1.9.6"></script>
+        <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js" integrity="sha512-L0Shl7nXXzIlBSUUPpxrokqq4ojqgZFQczTYlGjzONGTDAcLremjwaWv5A+EDLnxhQzY5xUZPWLOLqYRkY0Cbw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     </head>
     <body class="bg-white dark:bg-slate-100 dark:text-slate-700 text-xl h-screen">
-        <script src="https://unpkg.com/htmx.org@1.9.6"></script>
-        <div class="max-w-screen-xl mx-auto pt-8">
-            {{template "create-transaction" .Errors}}
-
-            <div hx-get="/transactions" hx-trigger="load, new-transactions from:body"></div> 
+        <nav class="bg-neutral-300">
+            <ul class="max-w-screen-xl mx-auto flex" hx-boost="true">
+                {{range .Nav.Items}}
+                <li>
+                    <a class="block p-4 {{if .Active}}text-red-500{{end}}" href="{{.Url}}">{{.Label}}</a>
+                </li>
+                {{ end }}
+            </ul>
+        </nav>
+        <div class="max-w-screen-xl mx-auto pt-8" id="content">
+            {{template "content" .Errors}}
         </div>
     </body>
 </html>

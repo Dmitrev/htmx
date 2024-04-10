@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,15 +17,8 @@ type QifTransaction struct {
     Address string
 }
 
-func OpenFile(path string) ([]QifTransaction, error) {
+func ReadTransactions(contents string) ([]QifTransaction, error) {
     transactions := []QifTransaction{}
-    data, err := os.ReadFile(path)
-
-    if err != nil {
-	return nil, err
-    }
-
-    contents := string(data)
     
     transaction := QifTransaction{}
     for index, line := range strings.Split(contents, "\n") {
