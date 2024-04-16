@@ -209,12 +209,34 @@ func postImport(w http.ResponseWriter, r *http.Request) {
     check(err)
 	//
     for _, transaction := range transactions {
-	fmt.Printf("%#v\n", transaction)
-	stmt, err := db.Prepare("INSERT INTO transactions (amount, date, description, payee, address, category) VALUES (?, ?, ?, ?, ?, ?)")
+	// Check if exists
+	stmt, err := db.Prepare(`
+	    SELECT COUNT(*) FROM transactions
+	    WHERE amount = ?
+	    AND date = ?
+	    AND description = ?
+	    AND payee = ?
+	    AND address = ?
+	    AND category = ?
+	`)
 	check(err)
 
 	date := transaction.Date.Format(time.DateOnly)
+	row := stmt.QueryRow(transaction.Amount, date, transaction.Memo, transaction.Payee, transaction.Address, transaction.Category)
+	var count int
+	row.Scan(&count)
+
+	if (count > 0) {
+	    continue;
+	}
+
+	stmt, err = db.Prepare("INSERT INTO transactions (amount, date, description, payee, address, category) VALUES (?, ?, ?, ?, ?, ?)")
+	check(err)
+
 	_, err = stmt.Exec(transaction.Amount, date, transaction.Memo, transaction.Payee, transaction.Address, transaction.Category)
+	check(err)
+
+	err = stmt.Close()
 	check(err)
     }
     tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.html"))
