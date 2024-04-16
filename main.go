@@ -44,7 +44,7 @@ func main() {
 }
 
 func startWebServer() {
-    d, err := sql.Open("mysql", "user:pass@/database")
+    d, err := sql.Open("mysql", "user:pass@tcp(localhost:3306)/database")
     db = d
     
     check(err)
@@ -80,7 +80,7 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
     tmpl := template.Must(template.ParseFiles("html/index.html", "html/partials/index.html"))
 
     nav := getNav(r.URL.Path)
-    data := PageData{"Home", nav, nil}
+    data := PageData{"Home", nav, nil, nil}
     err := tmpl.ExecuteTemplate(w, "index", data)
     check(err)
 }
@@ -90,7 +90,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
     tmpl := template.Must(template.ParseFiles("html/index.html", "html/partials/create-transaction.html"))
 
     nav := getNav(r.URL.Path)
-    data := PageData{"Transactions", nav, nil}
+    data := PageData{"Transactions", nav, nil, nil}
     err := tmpl.ExecuteTemplate(w, "index", data)
     check(err)
 }
@@ -139,8 +139,8 @@ func postStore(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("validation errors")
 	// If has errors return form with errors
 	nav := getNav(r.URL.Path)
-	data := PageData{"Page", nav, errors}
-	err := tmpl.ExecuteTemplate(w, "create-transaction", data)
+	data := PageData{"Page", nav, errors, nil}
+	err := tmpl.ExecuteTemplate(w, "content", data)
 
 	check(err)
 	return
@@ -160,7 +160,7 @@ func postStore(w http.ResponseWriter, r *http.Request) {
     check(err)
 
     w.Header().Add("HX-Trigger", "new-transactions")
-    err = tmpl.ExecuteTemplate(w, "create-transaction", nil)
+    err = tmpl.ExecuteTemplate(w, "content", nil)
     check(err)
 }
 
@@ -217,9 +217,19 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 	_, err = stmt.Exec(transaction.Amount, date, transaction.Memo, transaction.Payee, transaction.Address, transaction.Category)
 	check(err)
     }
+    tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.html"))
+
+    // If has errors return form with errors
+    nav := getNav(r.URL.Path)
+    messages := make(map[string]string)
+    messages["import"] = "Sucessfully imported";
 
     w.Header().Add("HX-Trigger", "new-transactions")
-    serveResponse(w, "ok")
+
+    data := PageData{"Page", nav, nil, messages}
+    err = tmpl.ExecuteTemplate(w, "content", data)
+
+    check(err)
 }
 
 func logRequest(r *http.Request) {
@@ -276,8 +286,8 @@ func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
     for rows.Next() {
 	var id int
 	var amount int
-	var date, description, payee, address, category string
-	var createdAt, updatedAt sql.NullString
+	var date, description string
+	var payee, address, category, createdAt, updatedAt sql.NullString
 
 	err := rows.Scan(&id, &amount, &date, &description, &payee, &address, &category, &createdAt, &updatedAt)
 	if err != nil {
@@ -297,7 +307,22 @@ func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
 	    updatedAtString = createdAt.String
 	}
 
-	t := &Transaction{id, amount, date, description, payee, address, category, createdAtString, updatedAtString}
+	payeeString := ""
+	if payee.Valid {
+	    payeeString = payee.String
+	}
+
+	addressString := ""
+	if address.Valid {
+	    addressString = payee.String
+	}
+
+	categoryString := ""
+	if category.Valid {
+	    categoryString = payee.String
+	}
+
+	t := &Transaction{id, amount, date, description, payeeString, addressString, categoryString, createdAtString, updatedAtString}
 	transactions = append(transactions, t)
     }
 

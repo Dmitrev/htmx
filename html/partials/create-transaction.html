@@ -1,79 +1,92 @@
 {{define "content"}}
-<form 
-    id="create-transaction"
-    hx-push-url="false" 
-    hx-target="this"
-    hx-swap="outerHTML"
-    hx-boost="true" 
-    action="/store" 
-    method="post"
-    class="bg-slate-50 p-16 shadow"
->
-    <div>
+<div id="top">
+    <form 
+        id="create-transaction"
+        hx-push-url="false" 
+        hx-target="#top"
+        hx-select="#top"
+        hx-swap="outerHTML"
+        hx-boost="true" 
+        action="/store" 
+        method="post"
+        class="bg-slate-50 p-16 shadow"
+    >
         <div>
-            <label class="block uppercase text-sm tracking-wider text-slate-400">amount</label>
+            <div>
+                <label class="block uppercase text-sm tracking-wider text-slate-400">amount</label>
+                <input 
+                    hx-preserve="true" 
+                    id="amount" 
+                    type="number" 
+                    name="amount" 
+                    class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
+                />
+                {{with .Errors.amount}}
+                    <span class="text-red-600">{{.}}</span>
+                {{end}}
+            </div>
+        </div>
+        <div class="mt-4">
+            <label class="block uppercase text-sm tracking-wider text-slate-400">date</label>
             <input 
                 hx-preserve="true" 
-                id="amount" 
-                type="number" 
-                name="amount" 
+                id="date" 
+                type="date" 
+                name="date" 
+                value="2024-03-07"
                 class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
             />
-            {{with .Errors.amount}}
-                <span class="text-red-600">{{.}}</span>
+            {{with .Errors.date}}
+            <span class="text-red-600">{{.}}</span>
             {{end}}
         </div>
-    </div>
-    <div class="mt-4">
-        <label class="block uppercase text-sm tracking-wider text-slate-400">date</label>
-        <input 
-            hx-preserve="true" 
-            id="date" 
-            type="date" 
-            name="date" 
-            value="2024-03-07"
-            class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
-        />
-        {{with .Errors.date}}
-        <span class="text-red-600">{{.}}</span>
+        <div class="mt-4">
+            <label class="block uppercase text-sm tracking-wider text-slate-400">description</label>
+            <input 
+                hx-preserve="true" 
+                id="description" 
+                type="text" 
+                name="description" 
+                class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
+            />
+            {{with .Errors.description}}
+            <span class="text-red-600">{{.}}</span>
+            {{end}}
+        </div>
+        <div class="flex gap-4 mt-4">
+            <button 
+                type="submit" 
+                class="bg-slate-500 text-slate-100 py-2 px-4 rounded-lg border border-solid border-slate-200"
+            >
+                Create transaction
+            </button>
+            <a 
+                hx-delete="/truncate"
+                href="#"
+                hx-swap="none"
+                class="bg-red-500 text-red-100 py-2 px-4 rounded-lg border border-solid border-red-200"
+            >
+                Truncate DB
+            </a>
+        </div>
+    </form>
+    <div id="import-component">
+        {{with .Messages.import}}
+        <span class="text-green-600">{{.}}</span>
         {{end}}
+        <form action="/import" 
+            hx-push-url="false" 
+            hx-swap="outerHTML"
+            hx-select="#import-component"
+            hx-target="#import-component"
+            hx-boost="true" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".qif"/>
+            <button
+                class="bg-green-500 text-green-100 py-2 px-4 rounded-lg border border-solid border-green-200"
+            >Import
+            </button>
+        </form>
     </div>
-    <div class="mt-4">
-        <label class="block uppercase text-sm tracking-wider text-slate-400">description</label>
-        <input 
-            hx-preserve="true" 
-            id="description" 
-            type="text" 
-            name="description" 
-            class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
-        />
-        {{with .Errors.description}}
-        <span class="text-red-600">{{.}}</span>
-        {{end}}
-    </div>
-    <div class="flex gap-4 mt-4">
-        <button 
-            type="submit" 
-            class="bg-slate-500 text-slate-100 py-2 px-4 rounded-lg border border-solid border-slate-200"
-        >
-            Create transaction
-        </button>
-        <a 
-            hx-delete="/truncate"
-            href="#"
-            hx-swap="none"
-            class="bg-red-500 text-red-100 py-2 px-4 rounded-lg border border-solid border-red-200"
-        >
-            Truncate DB
-        </a>
-    </div>
-</form>
-<form action="/import" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".qif"/>
-    <button
-        class="bg-green-500 text-green-100 py-2 px-4 rounded-lg border border-solid border-green-200"
-    >Import
-    </button>
-</form>
+</div>
 <div hx-get="/component-transactions" hx-trigger="load, new-transactions from:body"></div> 
 {{end}}
