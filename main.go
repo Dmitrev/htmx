@@ -298,7 +298,17 @@ func deleteTransaction(w http.ResponseWriter, r *http.Request) {
 
 func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
     // logRequest(r)
-    rows, err := db.Query("SELECT * FROM transactions order by date DESC") 
+    rows, err := db.Query(`SELECT 
+	    id,
+	    amount,
+	    date,
+	    description,
+	    payee,
+	    address,
+	    category,
+	    created_at,
+	    updated_at
+	FROM transactions order by date DESC`) 
 
     check(err)
     
