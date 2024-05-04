@@ -197,43 +197,52 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 
     bytes := make([]byte, fileHeader.Size)
 
-    n, err := file.Read(bytes)
-
+    _, err = file.Read(bytes)
     fileContent := string(bytes[:])
 
-    fmt.Printf("%#v\n", n)
-    fmt.Printf("%#v\n", err)
-    fmt.Printf("%s\n", fileContent)
-
-    transactions, err := ReadTransactions(fileContent)
+    // transactions, err := ReadTransactions(fileContent)
+    transactions, err := ReadFromCSV(fileContent)
     check(err)
 	//
     for _, transaction := range transactions {
 	// Check if exists
 	stmt, err := db.Prepare(`
 	    SELECT COUNT(*) FROM transactions
-	    WHERE amount = ?
-	    AND date = ?
-	    AND description = ?
-	    AND payee = ?
-	    AND address = ?
-	    AND category = ?
+	    WHERE external_transaction_id = ?
 	`)
 	check(err)
 
 	date := transaction.Date.Format(time.DateOnly)
-	row := stmt.QueryRow(transaction.Amount, date, transaction.Memo, transaction.Payee, transaction.Address, transaction.Category)
+	row := stmt.QueryRow(transaction.TransctionId)
 	var count int
 	row.Scan(&count)
 
 	if (count > 0) {
+	    fmt.Printf("%#v", count)
 	    continue;
 	}
 
-	stmt, err = db.Prepare("INSERT INTO transactions (amount, date, description, payee, address, category) VALUES (?, ?, ?, ?, ?, ?)")
+	stmt, err = db.Prepare(
+	    `INSERT INTO transactions (
+		amount,
+                date,
+                description,
+                payee,
+                address,
+                category,
+                external_transaction_id
+	    ) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 	check(err)
 
-	_, err = stmt.Exec(transaction.Amount, date, transaction.Memo, transaction.Payee, transaction.Address, transaction.Category)
+	_, err = stmt.Exec(
+	    transaction.Amount,
+	    date,
+	    transaction.Memo,
+	    transaction.Payee,
+	    transaction.Address,
+	    transaction.Category,
+	    transaction.TransctionId,
+	)
 	check(err)
 
 	err = stmt.Close()
@@ -346,15 +355,26 @@ func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
 
 	addressString := ""
 	if address.Valid {
-	    addressString = payee.String
+	    addressString = address.String
 	}
 
 	categoryString := ""
 	if category.Valid {
-	    categoryString = payee.String
+	    categoryString = category.String
 	}
 
-	t := &Transaction{id, amount, date, description, payeeString, addressString, categoryString, createdAtString, updatedAtString}
+	t := &Transaction{
+	    id, 
+	    amount, 
+	    date, 
+	    description,
+	    payeeString,
+	    addressString,
+	    categoryString,
+	    createdAtString,
+	    updatedAtString,
+	}
+
 	transactions = append(transactions, t)
     }
 
