@@ -13,6 +13,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+const maxMemoryFormInBytes = 100 * 1024 * 1024
+
 func (t *Transaction) ToMoney() string {
     return formatMoney(t.Amount)
 }
@@ -183,7 +185,7 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 	return
     }
 
-    err := r.ParseMultipartForm(100 * 1024 * 1024)
+    err := r.ParseMultipartForm(maxMemoryFormInBytes)
     if err != nil {
 	errBadRequest(w, err.Error())
 	return
