@@ -26,7 +26,7 @@
                 <td class="p-2">{{.Payee}}</td>
                 <td class="p-2">{{.Category}}</td>
                 <td class="p-2">
-                    <button class="text-slate-400" hx-delete="/delete/{{.Id}}">delete</button>
+                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?" class="text-slate-400" hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
                 </td>
             </tr>
             {{end}}

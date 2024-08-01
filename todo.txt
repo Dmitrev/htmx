@@ -1,0 +1,2 @@
+- [] http.HandleFunc("/truncate", truncate)
+- [] http.HandleFunc("/import", postImport)

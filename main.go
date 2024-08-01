@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"html/template"
+	"htmx/database"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -48,27 +50,34 @@ func main() {
 func startWebServer() {
     d, err := sql.Open("mysql", "user:pass@tcp(localhost:3306)/database")
     db = d
-    
+
     check(err)
 
     err = db.Ping()
     check(err)
+    router := &Router{}
+    router.Get("/", getRoot)  
+    router.Get("/transactions", getTransactions)  
+    router.Get("/component-transactions", getComponentTransactions)  
+    router.Post("/store", postStore)  
+    router.Delete("/delete/:id", deleteTransaction)  
+    router.Post("/truncate", truncate)
 
-    http.HandleFunc("/", getRoot)  
-    http.HandleFunc("/transactions", getTransactions)  
-    http.HandleFunc("/store", postStore)  
-    http.HandleFunc("/component-transactions", getComponentTransactions)  
-    http.HandleFunc("/clicked", getClicked)
-    http.HandleFunc("/hello", getHello)  
-    http.HandleFunc("/delete/", deleteTransaction)  
-    http.HandleFunc("/truncate", truncate)
-    http.HandleFunc("/import", postImport)
+    startServer("localhost", 3333, router)
 
-    fmt.Println("Starting server on http://localhost:3333")
-    http.ListenAndServe(":3333", nil)
+    // http.HandleFunc("/delete/", deleteTransaction)  
+    // http.HandleFunc("/import", postImport)
+    //
+    // fmt.Println("Starting server on http://localhost:3333")
+    // http.ListenAndServe(":3333", nil)
+    //
+    // fmt.Println("calling db.Close()")
+    // defer db.Close()
 
-    fmt.Println("calling db.Close()")
-    defer db.Close()
+
+
+    // new router setup
+    // registerRoutes("localhost", 3333)
 }
 
 func getRoot(w http.ResponseWriter, r *http.Request) {
@@ -97,17 +106,6 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
     check(err)
 }
 
-func getClicked(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
-    serveResponse(w, time.Now().Format(time.DateTime))
-}
-
-func getHello(w http.ResponseWriter, r *http.Request) {
-    serveResponse(w, "Hello, HTTP! \n")
-    logRequest(r)
-}
-
-
 func getNav(path string) Nav {
     return Nav {
 	Items: []*NavItem {
@@ -119,11 +117,6 @@ func getNav(path string) Nav {
 
 func postStore(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
-
-    if r.Method != "POST" {
-	errMethodNotAllowed(w)
-	return
-    }
 
     r.ParseForm()
     
@@ -167,11 +160,6 @@ func postStore(w http.ResponseWriter, r *http.Request) {
 }
 
 func truncate(w http.ResponseWriter, r *http.Request) {
-    if r.Method != "DELETE" {
-	errMethodNotAllowed(w)
-	return
-    }
-
     _, err := db.Exec("DELETE FROM transactions")
     check(err)
     w.Header().Add("HX-Trigger", "new-transactions")
@@ -205,6 +193,8 @@ func postImport(w http.ResponseWriter, r *http.Request) {
     // transactions, err := ReadTransactions(fileContent)
     transactions, err := ReadFromCSV(fileContent)
     check(err)
+    repo := database.MakeAccountRepo(db)
+    account := repo.GetFirstAccount()
 	//
     for _, transaction := range transactions {
 	// Check if exists
@@ -232,8 +222,9 @@ func postImport(w http.ResponseWriter, r *http.Request) {
                 payee,
                 address,
                 category,
-                external_transaction_id
-	    ) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+                external_transaction_id,
+		account_id
+	    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
 	check(err)
 
 	_, err = stmt.Exec(
@@ -244,6 +235,7 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 	    transaction.Address,
 	    transaction.Category,
 	    transaction.TransctionId,
+	    account.Id,
 	)
 	check(err)
 
@@ -291,12 +283,9 @@ func logRequest(r *http.Request) {
 func deleteTransaction(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
 
-    if r.Method != "DELETE" {
-	errMethodNotAllowed(w)
-	return
-    }
-
     id := strings.Split(r.URL.Path, "/")[2]
+
+    fmt.Printf("id: %s\n", id)
 
     stmt, err := db.Prepare("DELETE FROM transactions WHERE id = ?")
 
