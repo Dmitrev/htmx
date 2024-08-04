@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -29,8 +32,8 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
 
 	fmt.Printf("Found a match %s\n", route.Uri)
 	if route.Method != request.Method {
+	    writer.Header().Add("Content-Type", "text/html")
 	    writer.WriteHeader(405)
-	    writer.Header().Set("Content-Type", "text/html")
 	    writer.Write([]byte("<p>Method not allowed</p>"))
 	    return
 	}
@@ -38,6 +41,20 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
 	route.Handler(writer, request)
 	return
     }
+
+    path := "./public" + request.RequestURI
+    fileBytes, err := os.ReadFile(path)
+
+    if err == nil {
+	ext := filepath.Ext(path)
+	contentType := mime.TypeByExtension(ext)
+
+	writer.Header().Set("Content-Type", contentType)
+	writer.WriteHeader(200)
+	writer.Write(fileBytes)
+	return
+    }
+    // check if valid file
     
     writer.WriteHeader(404)
     writer.Header().Set("Content-Type", "text/html")
