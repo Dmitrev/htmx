@@ -56,8 +56,8 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
     }
     // check if valid file
     
-    writer.WriteHeader(404)
     writer.Header().Set("Content-Type", "text/html")
+    writer.WriteHeader(404)
     writer.Write([]byte("<p>Not Found</p>"))
 }
 
