@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 type Account struct {
@@ -15,6 +16,34 @@ type AccountRepo struct {
 
 func MakeAccountRepo(db *sql.DB) AccountRepo {
     return AccountRepo{db: db}
+}
+
+func (r *AccountRepo) CreateAccount(name string) (*Account, error) {
+    stmt, err := r.db.Prepare("INSERT INTO accounts (name) VALUES (?)")
+
+    if err != nil {
+	return nil, err
+    }
+
+    result, err := stmt.Exec(name)
+
+    if err != nil {
+	return nil, err
+    }
+
+    lastId, err := result.LastInsertId()
+
+    if err != nil {
+	return nil, err
+    }
+
+    fmt.Printf("Last inserted id: %d", lastId)
+
+    return &Account{
+	Id: lastId,
+	Name: name,
+    }, nil
+
 }
 
 func (r *AccountRepo) GetFirstAccount() Account {

@@ -58,15 +58,16 @@ func startWebServer() {
     router := &Router{}
     router.Get("/", getRoot)  
     router.Get("/transactions", getTransactions)  
+    router.Get("/accounts", getAccounts)  
+    router.Post("/accounts", createAccount)  
     router.Get("/component-transactions", getComponentTransactions)  
     router.Post("/store", postStore)  
     router.Delete("/delete/:id", deleteTransaction)  
     router.Post("/truncate", truncate)
+    router.Post("/import", postImport)
 
     startServer("localhost", 3333, router)
 
-    // http.HandleFunc("/delete/", deleteTransaction)  
-    // http.HandleFunc("/import", postImport)
     //
     // fmt.Println("Starting server on http://localhost:3333")
     // http.ListenAndServe(":3333", nil)
@@ -88,7 +89,7 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
     }
 
 
-    tmpl := template.Must(template.ParseFiles("html/index.html", "html/partials/index.html"))
+    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/index.gohtml"))
 
     nav := getNav(r.URL.Path)
     data := PageData{"Home", nav, nil, nil}
@@ -98,11 +99,48 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
-    tmpl := template.Must(template.ParseFiles("html/index.html", "html/partials/create-transaction.html"))
+    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/create-transaction.gohtml"))
 
     nav := getNav(r.URL.Path)
     data := PageData{"Transactions", nav, nil, nil}
     err := tmpl.ExecuteTemplate(w, "index", data)
+    check(err)
+}
+
+func getAccounts(w http.ResponseWriter, r *http.Request) {
+    logRequest(r)
+    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
+
+    nav := getNav(r.URL.Path)
+    data := PageData{"Accounts", nav, nil, nil}
+    err := tmpl.ExecuteTemplate(w, "index", data)
+    check(err)
+}
+
+func createAccount(w http.ResponseWriter, r *http.Request) {
+    logRequest(r)
+    r.ParseForm()
+    errors := make(map[string]string)
+
+    if (!r.Form.Has("name") || r.Form.Get("name") == "") {
+	errors["name"] = "Missing name"
+    }
+
+    if len(errors) == 0 {
+	repo := database.MakeAccountRepo(db)
+	account, err := repo.CreateAccount(r.Form.Get("name"))
+
+	check(err)
+
+	fmt.Printf("%#v\n", account)
+    }
+
+    nav := getNav(r.URL.Path)
+    data := PageData{"Page", nav, errors, nil}
+
+    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
+    err := tmpl.ExecuteTemplate(w, "content", data)
+
     check(err)
 }
 
@@ -111,6 +149,7 @@ func getNav(path string) Nav {
 	Items: []*NavItem {
 	    {"Home", "/", path == "/"},
 	    {"Transactions", "/transactions", path == "/transactions"},
+	    {"Accounts", "/accounts", path == "/accounts"},
 	},
     }
 }
@@ -120,7 +159,7 @@ func postStore(w http.ResponseWriter, r *http.Request) {
 
     r.ParseForm()
     
-    tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.html"))
+    tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.gohtml"))
     
     required := []string{"amount", "date", "description"}
     errors := make(map[string]string)
@@ -152,7 +191,10 @@ func postStore(w http.ResponseWriter, r *http.Request) {
 
     _, err = stmt.Exec(amount, date, description)
 
-    check(err)
+    if err != nil {
+	errServer(w, err)
+	return
+    }
 
     w.Header().Add("HX-Trigger", "new-transactions")
     err = tmpl.ExecuteTemplate(w, "content", nil)
@@ -168,10 +210,6 @@ func truncate(w http.ResponseWriter, r *http.Request) {
 
 func postImport(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
-    if r.Method != "POST" {
-	errMethodNotAllowed(w)
-	return
-    }
 
     err := r.ParseMultipartForm(maxMemoryFormInBytes)
     if err != nil {
@@ -242,7 +280,7 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 	err = stmt.Close()
 	check(err)
     }
-    tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.html"))
+    tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.gohtml"))
 
     // If has errors return form with errors
     nav := getNav(r.URL.Path)
@@ -371,13 +409,13 @@ func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
 
     totalFormatted := formatMoney(total)
 
-    tmpl := template.Must(template.ParseFiles("html/partials/transactions.html"))
+    tmpl := template.Must(template.ParseFiles("html/partials/transactions.gohtml"))
     data := TransactionData{totalFormatted, transactions}
 
     err = tmpl.Execute(w, data)
     check(err)
 
-    // serveFile(w, r, "html/partials/transactions.html")
+    // serveFile(w, r, "html/partials/transactions.gohtml")
 }
 
 func serveFile(
@@ -395,6 +433,13 @@ func serveResponse(
 ) {
     w.Header().Add("Content-type", "text/html")
     io.WriteString(w, body)
+}
+
+func errServer(w http.ResponseWriter, err error) {
+    w.WriteHeader(500);
+    formattedError := fmt.Sprintf("<div class=\"text-red-500\">%s<div>", err.Error())
+
+    w.Write([]byte(formattedError))
 }
 
 func errMethodNotAllowed(w http.ResponseWriter) {

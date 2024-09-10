@@ -1,14 +1,12 @@
 {{define "content"}}
 <div id="top">
+    <div id="error"></div>
     <form 
         id="create-transaction"
-        hx-push-url="false" 
         hx-target="#top"
-        hx-select="#top"
         hx-swap="outerHTML"
-        hx-boost="true" 
-        action="/store" 
-        method="post"
+        hx-target-error="#error"
+        hx-post="/store" 
         class="bg-slate-50 p-16 shadow"
     >
         <div>

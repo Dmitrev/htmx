@@ -21,6 +21,7 @@ type Router struct {
 }
 
 func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
+    routeUriMatch := false
 
     for _, route := range r.routes {
 	matches := routeMatches(request.RequestURI, route.Uri)
@@ -29,16 +30,20 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
 	    fmt.Printf("no match\n")
 	    continue
 	}
-
 	fmt.Printf("Found a match %s\n", route.Uri)
+	routeUriMatch = true
+
 	if route.Method != request.Method {
-	    writer.Header().Add("Content-Type", "text/html")
-	    writer.WriteHeader(405)
-	    writer.Write([]byte("<p>Method not allowed</p>"))
-	    return
+	    continue
 	}
 
 	route.Handler(writer, request)
+	return
+    }
+
+    if routeUriMatch {
+	writer.WriteHeader(405)
+	writer.Write([]byte("<p>Method not allowed</p>"))
 	return
     }
 

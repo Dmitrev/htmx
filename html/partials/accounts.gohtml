@@ -1,0 +1,37 @@
+{{define "content"}}
+<div id="top">
+    <div id="error"></div>
+    <form 
+        id="create-transaction"
+        hx-target="#top"
+        hx-swap="outerHTML"
+        hx-target-error="#error"
+        hx-post="/accounts" 
+        class="bg-slate-50 p-16 shadow"
+    >
+        <div>
+            <div>
+                <label class="block uppercase text-sm tracking-wider text-slate-400">name</label>
+                <input 
+                    hx-preserve="true" 
+                    id="name" 
+                    type="text" 
+                    name="name" 
+                    class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
+                />
+                {{with .Errors.name}}
+                    <span class="text-red-600">{{.}}</span>
+                {{end}}
+            </div>
+        </div>
+        <div class="flex gap-4 mt-4">
+            <button 
+                type="submit" 
+                class="bg-slate-500 text-slate-100 py-2 px-4 rounded-lg border border-solid border-slate-200"
+            >
+                Create account
+            </button>
+        </div>
+    </form>
+</div>
+{{end}}
