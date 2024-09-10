@@ -1,2 +1,3 @@
-- [] http.HandleFunc("/truncate", truncate)
-- [] http.HandleFunc("/import", postImport)
+- [] fix transaction error (account_id missing)
+- [] current day is showing wrong
+- [] Move route logging to router
