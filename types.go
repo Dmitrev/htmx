@@ -1,5 +1,7 @@
 package main
 
+import "htmx/database"
+
 type Transaction struct {
     Id int
     Amount int
@@ -15,6 +17,10 @@ type Transaction struct {
 type TransactionData struct {
     Total string
     Transactions []*Transaction
+}
+
+type AccountData struct {
+    Accounts []*database.Account
 }
 
 type PageData struct {

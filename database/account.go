@@ -55,5 +55,28 @@ func (r *AccountRepo) GetFirstAccount() Account {
     account := Account{Id: id, Name: name}
 
     return account 
-     
+}
+
+func (r *AccountRepo) GetAllAccounts() ([]*Account, error) {
+    rows, err := r.db.Query("select id, name from accounts")
+
+    accounts := make([]*Account, 0)
+
+    if err != nil {
+	return accounts, err
+    }
+
+    for rows.Next() {
+	var id int64
+	var name string
+
+	if err := rows.Scan(&id, &name); err != nil {
+	    fmt.Println("Failed to scan row, skipping")
+	    continue
+	}
+    
+	accounts = append(accounts, &Account{id, name})
+    }
+
+    return accounts, nil
 }

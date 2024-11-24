@@ -56,13 +56,14 @@ func startWebServer() {
     err = db.Ping()
     check(err)
     router := &Router{}
-    router.Get("/", getRoot)  
-    router.Get("/transactions", getTransactions)  
-    router.Get("/accounts", getAccounts)  
-    router.Post("/accounts", createAccount)  
-    router.Get("/component-transactions", getComponentTransactions)  
-    router.Post("/store", postStore)  
-    router.Delete("/delete/:id", deleteTransaction)  
+    router.Get("/", getRoot)
+    router.Get("/transactions", getTransactions)
+    router.Get("/accounts", getAccounts)
+    router.Get("/component/accounts", getAccountsComponent)
+    router.Post("/accounts", createAccount)
+    router.Get("/component-transactions", getComponentTransactions)
+    router.Post("/store", postStore)
+    router.Delete("/delete/:id", deleteTransaction)
     router.Post("/truncate", truncate)
     router.Post("/import", postImport)
 
@@ -117,6 +118,22 @@ func getAccounts(w http.ResponseWriter, r *http.Request) {
     check(err)
 }
 
+func getAccountsComponent(w http.ResponseWriter, r *http.Request) {
+    logRequest(r)
+    repo := database.MakeAccountRepo(db)
+    accounts, err := repo.GetAllAccounts()
+
+    if err != nil {
+	fmt.Printf("Failed to fetch accounts, error: %s\n", err)
+    }
+
+    tmpl := template.Must(template.ParseFiles("html/partials/accounts-list.gohtml"))
+    data := AccountData{accounts}
+
+    err = tmpl.Execute(w, data)
+    check(err)
+}
+
 func createAccount(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
     r.ParseForm()
@@ -133,6 +150,10 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 	check(err)
 
 	fmt.Printf("%#v\n", account)
+    }
+
+    if len(errors) == 0 {
+	w.Header().Add("HX-Trigger", "new-accounts")
     }
 
     nav := getNav(r.URL.Path)
@@ -185,11 +206,15 @@ func postStore(w http.ResponseWriter, r *http.Request) {
     date := r.Form.Get("date")
     description := r.Form.Get("description")
 
-    stmt, err := db.Prepare("insert into transactions (amount, date, description) VALUES (?, ?, ?)")
+
+    stmt, err := db.Prepare("insert into transactions (account_id, amount, date, description) VALUES (?, ?, ?, ?)")
 
     check(err)
+    accountRepo := database.MakeAccountRepo(db)
+    account := accountRepo.GetFirstAccount()
 
-    _, err = stmt.Exec(amount, date, description)
+    _, err = stmt.Exec(account.Id, amount, date, description)
+    defer stmt.Close()
 
     if err != nil {
 	errServer(w, err)
