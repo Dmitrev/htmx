@@ -2,13 +2,15 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"html/template"
+	"htmx/components"
 	"htmx/database"
+	"htmx/templates"
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -17,16 +19,11 @@ import (
 
 const maxMemoryFormInBytes = 100 * 1024 * 1024
 
-func (t *Transaction) ToMoney() string {
-    return formatMoney(t.Amount)
-}
+//go:embed views/layouts/*.gohtml
+//go:embed views/pages/*.gohtml
+var resources embed.FS
 
-func formatMoney(money int) string {
-    amount := float64(money / 100)
-    formatted := strconv.FormatFloat(amount, 'f', 2, 64)
-
-    return fmt.Sprintf("£%s", formatted)
-}
+var renderer *templates.Renderer
 
 func check(err error) {
     if err != nil {
@@ -61,12 +58,13 @@ func startWebServer() {
     router.Get("/accounts", getAccounts)
     router.Get("/component/accounts", getAccountsComponent)
     router.Post("/accounts", createAccount)
-    router.Get("/component-transactions", getComponentTransactions)
+    // router.Get("/component-transactions", getComponentTransactions)
     router.Post("/store", postStore)
     router.Delete("/delete/:id", deleteTransaction)
     router.Post("/truncate", truncate)
     router.Post("/import", postImport)
 
+    renderer = templates.MakeRenderer(resources)
     startServer("localhost", 3333, router)
 
     //
@@ -89,23 +87,32 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 	return
     }
 
-
-    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/index.gohtml"))
-
     nav := getNav(r.URL.Path)
-    data := PageData{"Home", nav, nil, nil}
-    err := tmpl.ExecuteTemplate(w, "index", data)
-    check(err)
+    data := PageData{"Home", nav, nil, nil, nil}
+    renderer.Render(w, "index.gohtml", data)
 }
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
-    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/create-transaction.gohtml"))
+    repo := database.MakeTransactionRepo(db)
+    transactions, err := repo.GetAllTransactions()
+
+    check(err)
 
     nav := getNav(r.URL.Path)
-    data := PageData{"Transactions", nav, nil, nil}
-    err := tmpl.ExecuteTemplate(w, "index", data)
-    check(err)
+    data := PageData{
+	"Transactions",
+	nav,
+	nil,
+	nil,
+	struct {
+	    Transactions []*database.Transaction
+	} {
+	    Transactions: transactions,
+	},
+    }
+
+    renderer.Render(w, "transactions.gohtml", data)
 }
 
 func getAccounts(w http.ResponseWriter, r *http.Request) {
@@ -113,12 +120,16 @@ func getAccounts(w http.ResponseWriter, r *http.Request) {
     tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
 
     nav := getNav(r.URL.Path)
-    data := PageData{"Accounts", nav, nil, nil}
+    data := PageData{"Accounts", nav, nil, nil, nil}
     err := tmpl.ExecuteTemplate(w, "index", data)
     check(err)
 }
 
 func getAccountsComponent(w http.ResponseWriter, r *http.Request) {
+    type templateData struct {
+	Accounts []*database.Account
+	CreateButton components.Button
+    }
     logRequest(r)
     repo := database.MakeAccountRepo(db)
     accounts, err := repo.GetAllAccounts()
@@ -128,7 +139,12 @@ func getAccountsComponent(w http.ResponseWriter, r *http.Request) {
     }
 
     tmpl := template.Must(template.ParseFiles("html/partials/accounts-list.gohtml"))
-    data := AccountData{accounts}
+    data := templateData {
+	Accounts: accounts,
+	CreateButton: components.Button {
+	    Value: "Create Account",
+	},
+    }
 
     err = tmpl.Execute(w, data)
     check(err)
@@ -157,7 +173,7 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
     }
 
     nav := getNav(r.URL.Path)
-    data := PageData{"Page", nav, errors, nil}
+    data := PageData{"Page", nav, errors, nil, nil}
 
     tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
     err := tmpl.ExecuteTemplate(w, "content", data)
@@ -194,7 +210,7 @@ func postStore(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("validation errors")
 	// If has errors return form with errors
 	nav := getNav(r.URL.Path)
-	data := PageData{"Page", nav, errors, nil}
+	data := PageData{"Page", nav, errors, nil, nil}
 	err := tmpl.ExecuteTemplate(w, "content", data)
 
 	check(err)
@@ -314,7 +330,7 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Add("HX-Trigger", "new-transactions")
 
-    data := PageData{"Page", nav, nil, messages}
+    data := PageData{"Page", nav, nil, messages, nil}
     err = tmpl.ExecuteTemplate(w, "content", data)
 
     check(err)
@@ -357,90 +373,6 @@ func deleteTransaction(w http.ResponseWriter, r *http.Request) {
     _, err = stmt.Exec(id)
 
     check(err)
-}
-
-func getComponentTransactions(w http.ResponseWriter, r *http.Request) {
-    // logRequest(r)
-    rows, err := db.Query(`SELECT 
-	    id,
-	    amount,
-	    date,
-	    description,
-	    payee,
-	    address,
-	    category,
-	    created_at,
-	    updated_at
-	FROM transactions order by date DESC`) 
-
-    check(err)
-    
-    transactions := make([]*Transaction, 0)
-    total := 0
-
-    for rows.Next() {
-	var id int
-	var amount int
-	var date, description string
-	var payee, address, category, createdAt, updatedAt sql.NullString
-
-	err := rows.Scan(&id, &amount, &date, &description, &payee, &address, &category, &createdAt, &updatedAt)
-	if err != nil {
-	    check(err)
-	}
-
-	total += amount
-
-
-	createdAtString := ""
-	if createdAt.Valid {
-	    createdAtString = createdAt.String
-	}
-
-	updatedAtString := ""
-	if updatedAt.Valid {
-	    updatedAtString = createdAt.String
-	}
-
-	payeeString := ""
-	if payee.Valid {
-	    payeeString = payee.String
-	}
-
-	addressString := ""
-	if address.Valid {
-	    addressString = address.String
-	}
-
-	categoryString := ""
-	if category.Valid {
-	    categoryString = category.String
-	}
-
-	t := &Transaction{
-	    id, 
-	    amount, 
-	    date, 
-	    description,
-	    payeeString,
-	    addressString,
-	    categoryString,
-	    createdAtString,
-	    updatedAtString,
-	}
-
-	transactions = append(transactions, t)
-    }
-
-    totalFormatted := formatMoney(total)
-
-    tmpl := template.Must(template.ParseFiles("html/partials/transactions.gohtml"))
-    data := TransactionData{totalFormatted, transactions}
-
-    err = tmpl.Execute(w, data)
-    check(err)
-
-    // serveFile(w, r, "html/partials/transactions.gohtml")
 }
 
 func serveFile(

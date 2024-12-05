@@ -1,3 +1,4 @@
+{{ define "layout_start" }}
 <!DOCTYPE HTML>
 <html>
     <head>
@@ -18,7 +19,9 @@
             </ul>
         </nav>
         <div class="max-w-screen-xl mx-auto pt-8" id="content">
-            {{template "content" .Errors}}
+{{end}}
+
+{{ define "layout_end" }}
         </div>
         <script src="https://unpkg.com/htmx.org@2.0.1"></script>
         <script src="https://unpkg.com/htmx-ext-response-targets@2.0.0/response-targets.js"></script>
@@ -28,3 +31,5 @@
         <script src="/js/script.js"></script>
     </body>
 </html>
+{{end}}
+            {{template "content" .Errors}}

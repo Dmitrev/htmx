@@ -1,0 +1,37 @@
+{{ template "layout_start" . }}
+{{/* <div> */}}
+{{/*     <span>total</span> */}}
+{{/*     <span>{{ .Total }}</span> */}}
+{{/* </div> */}}
+
+<div class="bg-slate-50 mt-16 shadow">
+    <table class="w-full ">
+        <thead class="bg-slate-200">
+            <tr>
+                <td class="p-2">ID</td>
+                <td class="p-2">Amount</td>
+                <td class="p-2">Date</td>
+                <td class="p-2">Description</td>
+                <td class="p-2">Payee</td>
+                <td class="p-2">Category</td>
+                <td class="p-2"></td>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Transactions}}
+            <tr>
+                <td class="p-2">{{.Id}}</td>
+                <td class="p-2">{{.ToMoney}}</td>
+                <td class="p-2">{{.Date}}</td>
+                <td class="p-2">{{.Description}}</td>
+                <td class="p-2">{{.Payee}}</td>
+                <td class="p-2">{{.Category}}</td>
+                <td class="p-2">
+                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?" class="text-slate-400" hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{ template "layout_end" }}
