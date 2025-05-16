@@ -7,17 +7,17 @@
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
         <link rel="manifest" href="/site.webmanifest">
     </head>
-    <body hx-ext="response-targets" class="bg-white dark:bg-slate-100 dark:text-slate-700 text-xl h-screen">
-        <nav class="bg-neutral-300">
-            <ul class="max-w-screen-xl mx-auto flex" hx-boost="true">
+    <body hx-ext="response-targets" >
+        <nav>
+            <ul  hx-boost="true">
                 {{range .Nav.Items}}
                 <li>
-                    <a class="block p-4 {{if .Active}}text-red-500{{end}}" href="{{.Url}}">{{.Label}}</a>
+                    <a  href="{{.Url}}">{{.Label}}</a>
                 </li>
                 {{ end }}
             </ul>
         </nav>
-        <div class="max-w-screen-xl mx-auto pt-8" id="content">
+        <div  id="content">
             {{template "content" .Errors}}
         </div>
         <script src="https://unpkg.com/htmx.org@2.0.1"></script>

@@ -117,12 +117,11 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 func getAccounts(w http.ResponseWriter, r *http.Request) {
     logRequest(r)
-    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
 
     nav := getNav(r.URL.Path)
     data := PageData{"Accounts", nav, nil, nil, nil}
-    err := tmpl.ExecuteTemplate(w, "index", data)
-    check(err)
+
+    renderer.Render(w, "accounts.gohtml", data);
 }
 
 func getAccountsComponent(w http.ResponseWriter, r *http.Request) {
@@ -394,7 +393,7 @@ func serveResponse(
 
 func errServer(w http.ResponseWriter, err error) {
     w.WriteHeader(500);
-    formattedError := fmt.Sprintf("<div class=\"text-red-500\">%s<div>", err.Error())
+    formattedError := fmt.Sprintf("<div>%s<div>", err.Error())
 
     w.Write([]byte(formattedError))
 }

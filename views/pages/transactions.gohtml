@@ -1,33 +1,29 @@
 {{ template "layout_start" . }}
-{{/* <div> */}}
-{{/*     <span>total</span> */}}
-{{/*     <span>{{ .Total }}</span> */}}
-{{/* </div> */}}
 
-<div class="bg-slate-50 mt-16 shadow">
-    <table class="w-full ">
-        <thead class="bg-slate-200">
+<div>
+    <table>
+        <thead>
             <tr>
-                <td class="p-2">ID</td>
-                <td class="p-2">Amount</td>
-                <td class="p-2">Date</td>
-                <td class="p-2">Description</td>
-                <td class="p-2">Payee</td>
-                <td class="p-2">Category</td>
-                <td class="p-2"></td>
+                <td>ID</td>
+                <td>Amount</td>
+                <td>Date</td>
+                <td>Description</td>
+                <td>Payee</td>
+                <td>Category</td>
+                <td></td>
             </tr>
         </thead>
         <tbody>
-            {{range .Transactions}}
+            {{range .Content.Transactions}}
             <tr>
-                <td class="p-2">{{.Id}}</td>
-                <td class="p-2">{{.ToMoney}}</td>
-                <td class="p-2">{{.Date}}</td>
-                <td class="p-2">{{.Description}}</td>
-                <td class="p-2">{{.Payee}}</td>
-                <td class="p-2">{{.Category}}</td>
-                <td class="p-2">
-                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?" class="text-slate-400" hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
+                <td>{{.Id}}</td>
+                <td>{{.ToMoney}}</td>
+                <td>{{.Date}}</td>
+                <td>{{.Description}}</td>
+                <td>{{.Payee}}</td>
+                <td>{{.Category}}</td>
+                <td>
+                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?"  hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
                 </td>
             </tr>
             {{end}}

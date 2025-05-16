@@ -6,54 +6,54 @@
         hx-swap="outerHTML"
         hx-target-error="#error"
         hx-post="/store" 
-        class="bg-slate-50 p-16 shadow"
+        
     >
         <div>
             <div>
-                <label class="block uppercase text-sm tracking-wider text-slate-400">amount</label>
+                <label>amount</label>
                 <input 
                     hx-preserve="true" 
                     id="amount" 
                     type="number" 
                     name="amount" 
-                    class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
+                    
                 />
                 {{with .Errors.amount}}
-                    <span class="text-red-600">{{.}}</span>
+                    <span>{{.}}</span>
                 {{end}}
             </div>
         </div>
-        <div class="mt-4">
-            <label class="block uppercase text-sm tracking-wider text-slate-400">date</label>
+        <div>
+            <label>date</label>
             <input 
                 hx-preserve="true" 
                 id="date" 
                 type="date" 
                 name="date" 
                 value="2024-03-07"
-                class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
+                
             />
             {{with .Errors.date}}
-            <span class="text-red-600">{{.}}</span>
+            <span>{{.}}</span>
             {{end}}
         </div>
-        <div class="mt-4">
-            <label class="block uppercase text-sm tracking-wider text-slate-400">description</label>
+        <div>
+            <label>description</label>
             <input 
                 hx-preserve="true" 
                 id="description" 
                 type="text" 
                 name="description" 
-                class="w-full text-lg px-4 py-2 border border-solid border-slate-300 rounded-lg"
+                
             />
             {{with .Errors.description}}
-            <span class="text-red-600">{{.}}</span>
+            <span>{{.}}</span>
             {{end}}
         </div>
-        <div class="flex gap-4 mt-4">
+        <div>
             <button 
                 type="submit" 
-                class="bg-slate-500 text-slate-100 py-2 px-4 rounded-lg border border-solid border-slate-200"
+                
             >
                 Create transaction
             </button>
@@ -61,7 +61,7 @@
                 hx-post="/truncate"
                 href="#"
                 hx-swap="none"
-                class="bg-red-500 text-red-100 py-2 px-4 rounded-lg border border-solid border-red-200"
+                
             >
                 Truncate DB
             </a>
@@ -69,7 +69,7 @@
     </form>
     <div id="import-component">
         {{with .Messages.import}}
-        <span class="text-green-600">{{.}}</span>
+        <span>{{.}}</span>
         {{end}}
         <form action="/import" 
             hx-push-url="false" 
@@ -79,7 +79,7 @@
             hx-boost="true" method="post" enctype="multipart/form-data">
             <input type="file" name="file" accept=".csv"/>
             <button
-                class="bg-green-500 text-green-100 py-2 px-4 rounded-lg border border-solid border-green-200"
+                
             >Import
             </button>
         </form>
@@ -90,30 +90,30 @@
     <span>{{ .Total }}</span>
 </div>
 
-<div class="bg-slate-50 mt-16 shadow">
-    <table class="w-full ">
-        <thead class="bg-slate-200">
+<div>
+    <table>
+        <thead>
             <tr>
-                <td class="p-2">ID</td>
-                <td class="p-2">Amount</td>
-                <td class="p-2">Date</td>
-                <td class="p-2">Description</td>
-                <td class="p-2">Payee</td>
-                <td class="p-2">Category</td>
-                <td class="p-2"></td>
+                <td>ID</td>
+                <td>Amount</td>
+                <td>Date</td>
+                <td>Description</td>
+                <td>Payee</td>
+                <td>Category</td>
+                <td></td>
             </tr>
         </thead>
         <tbody>
             {{range .Transactions}}
             <tr>
-                <td class="p-2">{{.Id}}</td>
-                <td class="p-2">{{.ToMoney}}</td>
-                <td class="p-2">{{.Date}}</td>
-                <td class="p-2">{{.Description}}</td>
-                <td class="p-2">{{.Payee}}</td>
-                <td class="p-2">{{.Category}}</td>
-                <td class="p-2">
-                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?" class="text-slate-400" hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
+                <td>{{.Id}}</td>
+                <td>{{.ToMoney}}</td>
+                <td>{{.Date}}</td>
+                <td>{{.Description}}</td>
+                <td>{{.Payee}}</td>
+                <td>{{.Category}}</td>
+                <td>
+                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?"  hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
                 </td>
             </tr>
             {{end}}
