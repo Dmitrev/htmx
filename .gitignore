@@ -1,2 +1,4 @@
 *.qif
 *.db
+*.out
+coverage.html
