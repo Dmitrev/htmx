@@ -19,6 +19,14 @@ import (
 
 const maxMemoryFormInBytes = 100 * 1024 * 1024
 
+const (
+	Reset  = "\033[0m"
+	Red    = "\033[31m"
+	Green  = "\033[32m"
+	Yellow = "\033[33m"
+	Blue   = "\033[34m"
+)
+
 //go:embed views/layouts/*.gohtml
 //go:embed views/pages/*.gohtml
 var resources embed.FS
@@ -52,10 +60,12 @@ func startWebServer() {
 
     err = db.Ping()
     check(err)
-    router := &Router{}
+    router := CreateRouter()
     router.Get("/", getRoot)
     router.Get("/transactions", getTransactions)
     router.Get("/accounts", getAccounts)
+    router.Get("/accounts/:id", showAccount)
+    router.Delete("/accounts/:id", deleteAccount)
     router.Get("/component/accounts", getAccountsComponent)
     router.Post("/accounts", createAccount)
     // router.Get("/component-transactions", getComponentTransactions)
@@ -80,26 +90,22 @@ func startWebServer() {
     // registerRoutes("localhost", 3333)
 }
 
-func getRoot(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
-    if r.URL.Path != "/" {
-	http.NotFound(w, r)
-	return
-    }
+func getRoot(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
 
-    nav := getNav(r.URL.Path)
+    nav := getNav(r.Request.URL.Path)
     data := PageData{"Home", nav, nil, nil, nil}
     renderer.Render(w, "index.gohtml", data)
 }
 
-func getTransactions(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
+func getTransactions(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
     repo := database.MakeTransactionRepo(db)
     transactions, err := repo.GetAllTransactions()
 
     check(err)
 
-    nav := getNav(r.URL.Path)
+    nav := getNav(r.Request.URL.Path)
     data := PageData{
 	"Transactions",
 	nav,
@@ -115,21 +121,21 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
     renderer.Render(w, "transactions.gohtml", data)
 }
 
-func getAccounts(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
+func getAccounts(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
 
-    nav := getNav(r.URL.Path)
+    nav := getNav(r.Request.URL.Path)
     data := PageData{"Accounts", nav, nil, nil, nil}
 
     renderer.Render(w, "accounts.gohtml", data);
 }
 
-func getAccountsComponent(w http.ResponseWriter, r *http.Request) {
+func getAccountsComponent(w http.ResponseWriter, r RequestContext) {
     type templateData struct {
 	Accounts []*database.Account
 	CreateButton components.Button
     }
-    logRequest(r)
+    logRequest(r.Request)
     repo := database.MakeAccountRepo(db)
     accounts, err := repo.GetAllAccounts()
 
@@ -149,18 +155,19 @@ func getAccountsComponent(w http.ResponseWriter, r *http.Request) {
     check(err)
 }
 
-func createAccount(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
-    r.ParseForm()
+func createAccount(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
+    r.Request.ParseForm()
+
     errors := make(map[string]string)
 
-    if (!r.Form.Has("name") || r.Form.Get("name") == "") {
+    if (!r.Request.Form.Has("name") || r.Request.Form.Get("name") == "") {
 	errors["name"] = "Missing name"
     }
 
     if len(errors) == 0 {
 	repo := database.MakeAccountRepo(db)
-	account, err := repo.CreateAccount(r.Form.Get("name"))
+	account, err := repo.CreateAccount(r.Request.Form.Get("name"))
 
 	check(err)
 
@@ -171,13 +178,45 @@ func createAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("HX-Trigger", "new-accounts")
     }
 
-    nav := getNav(r.URL.Path)
+    nav := getNav(r.Request.URL.Path)
     data := PageData{"Page", nav, errors, nil, nil}
 
     tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
     err := tmpl.ExecuteTemplate(w, "content", data)
 
     check(err)
+}
+
+func deleteAccount(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
+    id := strings.Split(r.Request.URL.Path, "/")[2]
+
+    fmt.Printf("id: %s\n", id)
+
+    stmt, err := db.Prepare("DELETE FROM accounts WHERE id = ?")
+
+    check(err)
+
+    _, err = stmt.Exec(id)
+
+    check(err)
+    emptyResponse(w)
+}
+
+func showAccount(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
+    id := strings.Split(r.Request.URL.Path, "/")[2]
+
+    fmt.Printf("id: %s\n", id)
+
+    stmt, err := db.Prepare("DELETE FROM accounts WHERE id = ?")
+
+    check(err)
+
+    _, err = stmt.Exec(id)
+
+    check(err)
+    emptyResponse(w)
 }
 
 func getNav(path string) Nav {
@@ -190,17 +229,17 @@ func getNav(path string) Nav {
     }
 }
 
-func postStore(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
+func postStore(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
 
-    r.ParseForm()
+    r.Request.ParseForm()
     
     tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.gohtml"))
     
     required := []string{"amount", "date", "description"}
     errors := make(map[string]string)
     for _, key := range required {
-	if !r.Form.Has(key) || r.Form.Get(key) == "" {
+	if !r.Request.Form.Has(key) || r.Request.Form.Get(key) == "" {
 	    errors[key] = fmt.Sprintf("The %s field is missing", key) 
 	}
     }
@@ -208,7 +247,7 @@ func postStore(w http.ResponseWriter, r *http.Request) {
     if len(errors) > 0 {
 	fmt.Println("validation errors")
 	// If has errors return form with errors
-	nav := getNav(r.URL.Path)
+	nav := getNav(r.Request.URL.Path)
 	data := PageData{"Page", nav, errors, nil, nil}
 	err := tmpl.ExecuteTemplate(w, "content", data)
 
@@ -217,9 +256,9 @@ func postStore(w http.ResponseWriter, r *http.Request) {
     }
 
     // otherwise continue inserting
-    amount := r.Form.Get("amount")
-    date := r.Form.Get("date")
-    description := r.Form.Get("description")
+    amount := r.Request.Form.Get("amount")
+    date := r.Request.Form.Get("date")
+    description := r.Request.Form.Get("description")
 
 
     stmt, err := db.Prepare("insert into transactions (account_id, amount, date, description) VALUES (?, ?, ?, ?)")
@@ -241,23 +280,23 @@ func postStore(w http.ResponseWriter, r *http.Request) {
     check(err)
 }
 
-func truncate(w http.ResponseWriter, r *http.Request) {
+func truncate(w http.ResponseWriter, r RequestContext) {
     _, err := db.Exec("DELETE FROM transactions")
     check(err)
     w.Header().Add("HX-Trigger", "new-transactions")
     serveResponse(w, "ok")
 }
 
-func postImport(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
+func postImport(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
 
-    err := r.ParseMultipartForm(maxMemoryFormInBytes)
+    err := r.Request.ParseMultipartForm(maxMemoryFormInBytes)
     if err != nil {
 	errBadRequest(w, err.Error())
 	return
     }
 
-    file, fileHeader, err := r.FormFile("file")
+    file, fileHeader, err := r.Request.FormFile("file")
     if err != nil {
 	errBadRequest(w, err.Error())
 	return
@@ -323,7 +362,7 @@ func postImport(w http.ResponseWriter, r *http.Request) {
     tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.gohtml"))
 
     // If has errors return form with errors
-    nav := getNav(r.URL.Path)
+    nav := getNav(r.Request.URL.Path)
     messages := make(map[string]string)
     messages["import"] = "Sucessfully imported";
 
@@ -336,7 +375,7 @@ func postImport(w http.ResponseWriter, r *http.Request) {
 }
 
 func logRequest(r *http.Request) {
-    _, err := fmt.Printf("[%s] %s %s\n", time.Now().Format(time.DateTime), r.Method, r.URL.Path)
+    _, err := fmt.Printf("[%s] %s%s%s %s\n", time.Now().Format(time.DateTime), Green, r.Method, Reset, r.URL.Path)
 
     check(err)
 
@@ -358,10 +397,10 @@ func logRequest(r *http.Request) {
     fmt.Println("-----")
 }
 
-func deleteTransaction(w http.ResponseWriter, r *http.Request) {
-    logRequest(r)
+func deleteTransaction(w http.ResponseWriter, r RequestContext) {
+    logRequest(r.Request)
 
-    id := strings.Split(r.URL.Path, "/")[2]
+    id := strings.Split(r.Request.URL.Path, "/")[2]
 
     fmt.Printf("id: %s\n", id)
 
@@ -389,6 +428,13 @@ func serveResponse(
 ) {
     w.Header().Add("Content-type", "text/html")
     io.WriteString(w, body)
+}
+
+func emptyResponse(
+    w http.ResponseWriter,
+) {
+    w.Header().Add("Content-type", "text/html")
+    w.WriteHeader(200)
 }
 
 func errServer(w http.ResponseWriter, err error) {

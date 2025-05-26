@@ -57,6 +57,28 @@ func (r *AccountRepo) GetFirstAccount() Account {
     return account 
 }
 
+func (r *AccountRepo) GetById(accountId int64) (*Account, error) {
+    query, err := r.db.Prepare("select id, name from accounts where id = ? limit 1")
+    if err != nil {
+	return nil, err
+    }
+
+    row := query.QueryRow(accountId)
+
+    var id int64
+    var name string
+
+    err = row.Scan(&id, &name)
+
+    if err != nil {
+	return nil, err
+    }
+
+    account := Account{Id: id, Name: name}
+
+    return &account, nil
+}
+
 func (r *AccountRepo) GetAllAccounts() ([]*Account, error) {
     rows, err := r.db.Query("select id, name from accounts")
 

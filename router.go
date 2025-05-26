@@ -9,7 +9,18 @@ import (
 	"strings"
 )
 
-type RouteHandler func(w http.ResponseWriter, r *http.Request)
+
+type FileReader interface {
+    ReadFile(filename string) ([]byte, error)
+}
+
+type ReadFileReader struct{}
+
+func (r ReadFileReader) ReadFile(filename string) ([]byte, error) {
+    return os.ReadFile(filename)
+}
+
+type RouteHandler func(w http.ResponseWriter, r RequestContext)
 type Route struct {
     Method string
     Uri string
@@ -17,8 +28,15 @@ type Route struct {
 }
 
 type Router struct {
+    reader FileReader
     routes []Route
 }
+
+type RequestContext struct {
+    Params map[string]string
+    Request *http.Request
+}
+
 
 func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
     routeUriMatch := false
@@ -30,6 +48,7 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
 	    fmt.Printf("no match\n")
 	    continue
 	}
+
 	fmt.Printf("Found a match %s\n", route.Uri)
 	routeUriMatch = true
 
@@ -37,7 +56,14 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
 	    continue
 	}
 
-	route.Handler(writer, request)
+	// get parmas
+	params := extractParams(route.Uri, request.RequestURI)
+	context := RequestContext{
+	    Params: params,
+	    Request: request,
+	}
+
+	route.Handler(writer, context)
 	return
     }
 
@@ -78,6 +104,26 @@ func (r *Router) Delete(uri string, handler RouteHandler) {
     r.routes = append(r.routes, Route{"DELETE", uri, handler})
 }
 
+func extractParams(routeUri, requestUri string) map[string]string {
+    requestUriParts := strings.Split(requestUri, "/")
+    routeUriParts := strings.Split(routeUri, "/")
+
+    params := make(map[string]string)
+
+    for index, part := range routeUriParts {
+	fmt.Printf("index: %d, part: %s requestPart: %s\n", index, part, requestUriParts[index])
+
+	if !strings.HasPrefix(part, ":") {
+	    continue;
+	}
+
+	name := strings.TrimLeft(part, ":")
+	params[name] = requestUriParts[index]
+    }
+
+    return params
+}
+
 func routeMatches(requestUri, route string) bool {
 	fmt.Printf("Check request uri: %s matches %s\n", requestUri, route)
 	requestUriParts := strings.Split(requestUri, "/")
@@ -110,14 +156,21 @@ func routeMatches(requestUri, route string) bool {
     return true
 }
 
+func CreateRouter(options ...func(*Router)) *Router {
+    router := &Router{
+	reader: ReadFileReader{},
+    }
+
+    for _, option := range options {
+	option(router)
+    }
+
+    return router
+}
+
 func startServer(host string, port int, router *Router) {
     serverHost := fmt.Sprintf("%s:%d", host, port)
     fmt.Printf("%s\n\n", serverHost)
     err := http.ListenAndServe(serverHost, router)
     check(err)
-}
-
-func home(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(200)
-    w.Write([]byte("OK"))
 }

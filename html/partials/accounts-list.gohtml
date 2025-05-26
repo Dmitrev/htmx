@@ -1,11 +1,14 @@
 <table>
     {{ range .Accounts}}
-    <tr>
+    <tr id="transaction-row-{{.Id}}">
         <td>
             {{.Id}}
         </td>
         <td>
             {{.Name}}
+        </td>
+        <td>
+            <button hx-delete="/accounts/{{.Id}}" hx-target="#transaction-row-{{.Id}}" hx-swap="outerHTML">delete</button>
         </td>
     </tr>
     {{end}}
