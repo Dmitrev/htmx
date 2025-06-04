@@ -10,8 +10,8 @@
         <link rel="stylesheet" href="/css/style.css">
     </head>
     <body hx-ext="response-targets" >
-        <nav>
-            <ul  hx-boost="true">
+        <nav class="main-nav">
+            <ul hx-boost="true">
                 {{range .Nav.Items}}
                 <li>
                     <a  href="{{.Url}}">{{.Label}}</a>

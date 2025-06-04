@@ -46,3 +46,16 @@ table {
     border-collapse: collapse;
     border-spacing: 0;
 }
+
+
+
+/*
+end of reset 
+*/
+.main-nav > ul{
+    box-sizing: border-box;
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
