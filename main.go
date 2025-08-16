@@ -33,7 +33,7 @@ var resources embed.FS
 
 var renderer *templates.Renderer
 
-func check(err error) {
+func panicOnErr(err error) {
     if err != nil {
 	panic(err)
     }
@@ -56,10 +56,10 @@ func startWebServer() {
     d, err := sql.Open("mysql", "user:pass@tcp(localhost:3306)/database")
     db = d
 
-    check(err)
+    panicOnErr(err)
 
     err = db.Ping()
-    check(err)
+    panicOnErr(err)
     router := CreateRouter()
     router.Get("/", getRoot)
     router.Get("/transactions", getTransactions)
@@ -103,7 +103,7 @@ func getTransactions(w http.ResponseWriter, r RequestContext) {
     repo := database.MakeTransactionRepo(db)
     transactions, err := repo.GetAllTransactions()
 
-    check(err)
+    panicOnErr(err)
 
     nav := getNav(r.Request.URL.Path)
     data := PageData{
@@ -152,7 +152,7 @@ func getAccountsComponent(w http.ResponseWriter, r RequestContext) {
     }
 
     err = tmpl.Execute(w, data)
-    check(err)
+    panicOnErr(err)
 }
 
 func createAccount(w http.ResponseWriter, r RequestContext) {
@@ -169,7 +169,7 @@ func createAccount(w http.ResponseWriter, r RequestContext) {
 	repo := database.MakeAccountRepo(db)
 	account, err := repo.CreateAccount(r.Request.Form.Get("name"))
 
-	check(err)
+	panicOnErr(err)
 
 	fmt.Printf("%#v\n", account)
     }
@@ -184,7 +184,7 @@ func createAccount(w http.ResponseWriter, r RequestContext) {
     tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
     err := tmpl.ExecuteTemplate(w, "content", data)
 
-    check(err)
+    panicOnErr(err)
 }
 
 func deleteAccount(w http.ResponseWriter, r RequestContext) {
@@ -195,11 +195,11 @@ func deleteAccount(w http.ResponseWriter, r RequestContext) {
 
     stmt, err := db.Prepare("DELETE FROM accounts WHERE id = ?")
 
-    check(err)
+    panicOnErr(err)
 
     _, err = stmt.Exec(id)
 
-    check(err)
+    panicOnErr(err)
     emptyResponse(w)
 }
 
@@ -211,11 +211,11 @@ func showAccount(w http.ResponseWriter, r RequestContext) {
 
     stmt, err := db.Prepare("DELETE FROM accounts WHERE id = ?")
 
-    check(err)
+    panicOnErr(err)
 
     _, err = stmt.Exec(id)
 
-    check(err)
+    panicOnErr(err)
     emptyResponse(w)
 }
 
@@ -251,7 +251,7 @@ func postStore(w http.ResponseWriter, r RequestContext) {
 	data := PageData{"Page", nav, errors, nil, nil}
 	err := tmpl.ExecuteTemplate(w, "content", data)
 
-	check(err)
+	panicOnErr(err)
 	return
     }
 
@@ -263,7 +263,7 @@ func postStore(w http.ResponseWriter, r RequestContext) {
 
     stmt, err := db.Prepare("insert into transactions (account_id, amount, date, description) VALUES (?, ?, ?, ?)")
 
-    check(err)
+    panicOnErr(err)
     accountRepo := database.MakeAccountRepo(db)
     account := accountRepo.GetFirstAccount()
 
@@ -277,12 +277,12 @@ func postStore(w http.ResponseWriter, r RequestContext) {
 
     w.Header().Add("HX-Trigger", "new-transactions")
     err = tmpl.ExecuteTemplate(w, "content", nil)
-    check(err)
+    panicOnErr(err)
 }
 
 func truncate(w http.ResponseWriter, r RequestContext) {
     _, err := db.Exec("DELETE FROM transactions")
-    check(err)
+    panicOnErr(err)
     w.Header().Add("HX-Trigger", "new-transactions")
     serveResponse(w, "ok")
 }
@@ -309,7 +309,7 @@ func postImport(w http.ResponseWriter, r RequestContext) {
 
     // transactions, err := ReadTransactions(fileContent)
     transactions, err := ReadFromCSV(fileContent)
-    check(err)
+    panicOnErr(err)
     repo := database.MakeAccountRepo(db)
     account := repo.GetFirstAccount()
 	//
@@ -319,7 +319,7 @@ func postImport(w http.ResponseWriter, r RequestContext) {
 	    SELECT COUNT(*) FROM transactions
 	    WHERE external_transaction_id = ?
 	`)
-	check(err)
+	panicOnErr(err)
 
 	date := transaction.Date.Format(time.DateOnly)
 	row := stmt.QueryRow(transaction.TransctionId)
@@ -342,7 +342,7 @@ func postImport(w http.ResponseWriter, r RequestContext) {
                 external_transaction_id,
 		account_id
 	    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-	check(err)
+	panicOnErr(err)
 
 	_, err = stmt.Exec(
 	    transaction.Amount,
@@ -354,10 +354,10 @@ func postImport(w http.ResponseWriter, r RequestContext) {
 	    transaction.TransctionId,
 	    account.Id,
 	)
-	check(err)
+	panicOnErr(err)
 
 	err = stmt.Close()
-	check(err)
+	panicOnErr(err)
     }
     tmpl := template.Must(template.ParseFiles("html/partials/create-transaction.gohtml"))
 
@@ -371,13 +371,13 @@ func postImport(w http.ResponseWriter, r RequestContext) {
     data := PageData{"Page", nav, nil, messages, nil}
     err = tmpl.ExecuteTemplate(w, "content", data)
 
-    check(err)
+    panicOnErr(err)
 }
 
 func logRequest(r *http.Request) {
     _, err := fmt.Printf("[%s] %s%s%s %s\n", time.Now().Format(time.DateTime), Green, r.Method, Reset, r.URL.Path)
 
-    check(err)
+    panicOnErr(err)
 
     fmt.Println("--headers---")
     for key, values := range r.Header {
@@ -386,7 +386,7 @@ func logRequest(r *http.Request) {
 
     if r.Method == "POST" {
 	err := r.ParseForm(); 
-	check(err)
+	panicOnErr(err)
     } 
 
     fmt.Println("--body---")
@@ -406,11 +406,11 @@ func deleteTransaction(w http.ResponseWriter, r RequestContext) {
 
     stmt, err := db.Prepare("DELETE FROM transactions WHERE id = ?")
 
-    check(err)
+    panicOnErr(err)
 
     _, err = stmt.Exec(id)
 
-    check(err)
+    panicOnErr(err)
 }
 
 func serveFile(

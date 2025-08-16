@@ -30,7 +30,7 @@ func ReadTransactions(contents string) ([]QifTransaction, error) {
 	// Date
 	if (strings.HasPrefix(line, "D")) {
 	    date, err := time.Parse("02/01/2006", line[1:])
-	    check(err)
+	    panicOnErr(err)
 	    transaction.Date = date
 	    continue
 	}

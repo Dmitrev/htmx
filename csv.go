@@ -38,14 +38,14 @@ func ReadFromCSV(contents string) ([]CsvTransaction, error) {
 
 	transaction.TransctionId = line[0]
 	date, err := time.Parse("02/01/2006", line[1])
-	check(err)
+	panicOnErr(err)
 	transaction.Date = date
 	transaction.Memo = line[11]
 	transaction.Category = line[6]
 	transaction.Payee = line[4]
 	transaction.Address = line[12]
 	amount, err := strconv.ParseFloat(line[7], 64)
-	check(err)
+	panicOnErr(err)
 	amount *= 100
 	transaction.Amount = int64(amount)
 

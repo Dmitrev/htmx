@@ -172,5 +172,5 @@ func startServer(host string, port int, router *Router) {
     serverHost := fmt.Sprintf("%s:%d", host, port)
     fmt.Printf("%s\n\n", serverHost)
     err := http.ListenAndServe(serverHost, router)
-    check(err)
+    panicOnErr(err)
 }
