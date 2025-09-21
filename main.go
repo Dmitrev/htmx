@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"embed"
 	"fmt"
 	"html/template"
 	"htmx/components"
@@ -26,10 +25,6 @@ const (
 	Yellow = "\033[33m"
 	Blue   = "\033[34m"
 )
-
-//go:embed views/layouts/*.gohtml
-//go:embed views/pages/*.gohtml
-var resources embed.FS
 
 var renderer *templates.Renderer
 
@@ -74,7 +69,7 @@ func startWebServer() {
     router.Post("/truncate", truncate)
     router.Post("/import", postImport)
 
-    renderer = templates.MakeRenderer(resources)
+    renderer = templates.MakeRenderer(true)
     startServer("localhost", 3333, router)
 
     //

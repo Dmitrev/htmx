@@ -41,6 +41,8 @@ type RequestContext struct {
 func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
     routeUriMatch := false
 
+    writer.Header().Add("Access-Control-Allow-Origin", "*")
+
     for _, route := range r.routes {
 	matches := routeMatches(request.RequestURI, route.Uri)
 

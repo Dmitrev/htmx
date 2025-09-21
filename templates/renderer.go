@@ -2,44 +2,48 @@ package templates
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"html/template"
-	// "io/fs"
 	"net/http"
-	// "os"
 	"path/filepath"
-	// "strings"
 )
-
 
 type Renderer struct {
     templates map[string]*template.Template
+    devmode bool
 }
 
-func MakeRenderer(resources embed.FS) *Renderer {
+func MakeRenderer(devmode bool) *Renderer {
 
+    r := &Renderer{
+	devmode: devmode,
+    }
 
-    templates := make(map[string]*template.Template)
+    r.loadTemplates()
+
+    return r
+}
+
+func (r *Renderer) loadTemplates() {
     // var paths []string
+    r.templates = make(map[string]*template.Template)
     pageFiles, _ := filepath.Glob("views/pages/*.gohtml")
     layoutFiles, _ := filepath.Glob("views/layouts/*.gohtml")
 
-    // tmpl := template.Must(template.New("pages/index.gohtml").Parse("This is the index page"))
-
     for _, page := range pageFiles {
 	paths := append(layoutFiles, page)
-	templates[filepath.Base(page)] = template.Must(template.ParseFiles(paths...))
+	r.templates[filepath.Base(page)] = template.Must(template.ParseFiles(paths...))
     }
 
-	fmt.Printf("%v\n", templates)
-
-    // tmpl := template.Must(template.ParseFS(resources, paths...))
-
-    return &Renderer{templates}
+    fmt.Printf("%v\n", r.templates)
 }
 
 func (r *Renderer) Render(w http.ResponseWriter, name string, data interface{}) {
+
+    if r.devmode {
+	r.loadTemplates()
+    }
+
     var buffer bytes.Buffer
 
     err := r.templates[name].ExecuteTemplate(&buffer, name, data)
