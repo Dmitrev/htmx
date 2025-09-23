@@ -2,6 +2,18 @@
 
 <div>
     <h1>Create new tranctions</h1>
+
+    <div>
+        <form>
+            <input type="number" name="amount" />
+            <select name="account">
+                {{ range .Content.Accounts }}
+                <option>{{.Name}}</option>
+                {{ end }}
+            </select>
+            <button hx-post="/transactions/create">Create</button>
+        </form>
+    </div>
 </div>
 
 <div>
@@ -27,7 +39,13 @@
                 <td>{{.Payee}}</td>
                 <td>{{.Category}}</td>
                 <td>
-                    <button hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?"  hx-target="closest tr" hx-delete="/delete/{{.Id}}">delete</button>
+                    <button 
+                        hx-confirm="are you sure you want to delete transaction #{{.Id}} ({{.Description}})?"
+                        hx-target="closest tr" 
+                        hx-delete="/delete/{{.Id}}"
+                    >
+                        delete
+                    </button>
                 </td>
             </tr>
             {{end}}

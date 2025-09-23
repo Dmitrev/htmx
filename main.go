@@ -96,9 +96,11 @@ func getRoot(w http.ResponseWriter, r RequestContext) {
 func getTransactions(w http.ResponseWriter, r RequestContext) {
     logRequest(r.Request)
     repo := database.MakeTransactionRepo(db)
+    accountRepo := database.MakeAccountRepo(db)
     transactions, err := repo.GetAllTransactions()
 
     panicOnErr(err)
+    accounts, err := accountRepo.GetAllAccounts()
 
     nav := getNav(r.Request.URL.Path)
     data := PageData{
@@ -108,8 +110,10 @@ func getTransactions(w http.ResponseWriter, r RequestContext) {
 	nil,
 	struct {
 	    Transactions []*database.Transaction
+	    Accounts []*database.Account
 	} {
 	    Transactions: transactions,
+	    Accounts: accounts,
 	},
     }
 
