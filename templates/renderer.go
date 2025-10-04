@@ -34,8 +34,6 @@ func (r *Renderer) loadTemplates() {
 	paths := append(layoutFiles, page)
 	r.templates[filepath.Base(page)] = template.Must(template.ParseFiles(paths...))
     }
-
-    fmt.Printf("%v\n", r.templates)
 }
 
 func (r *Renderer) Render(w http.ResponseWriter, name string, data interface{}) {
