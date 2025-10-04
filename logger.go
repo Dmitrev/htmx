@@ -34,7 +34,7 @@ func (l *Logger) PrintHeading() {
     l.Sep()
 }
 
-func (l *Logger) Col(content string, length int, color string) string {
+func (l *Logger) Col(content string, length int, color Color) string {
 
     paddingLeft := 0
     paddingRight := 0
@@ -49,11 +49,11 @@ func (l *Logger) Col(content string, length int, color string) string {
     }
 
     builder := strings.Builder{}
-    builder.WriteString(color)
+    builder.WriteString(string(color))
     builder.WriteString(strings.Repeat(" ", paddingLeft))
     builder.WriteString(content)
     builder.WriteString(strings.Repeat(" ", paddingRight))
-    builder.WriteString(Reset)
+    builder.WriteString(string(Reset))
 
     return builder.String()
 }
