@@ -30,6 +30,7 @@ type Route struct {
 type Router struct {
     reader FileReader
     routes []Route
+    logger Logger
 }
 
 type RequestContext struct {
@@ -43,15 +44,15 @@ func (r *Router) ServeHTTP (writer http.ResponseWriter, request *http.Request) {
 
     writer.Header().Add("Access-Control-Allow-Origin", "*")
 
+    r.logger.PrintRequest(request.Method, request.RequestURI)
+
     for _, route := range r.routes {
 	matches := routeMatches(request.RequestURI, route.Uri)
 
 	if !matches {
-	    fmt.Printf("no match\n")
 	    continue
 	}
 
-	fmt.Printf("Found a match %s\n", route.Uri)
 	routeUriMatch = true
 
 	if route.Method != request.Method {
@@ -113,8 +114,6 @@ func extractParams(routeUri, requestUri string) map[string]string {
     params := make(map[string]string)
 
     for index, part := range routeUriParts {
-	fmt.Printf("index: %d, part: %s requestPart: %s\n", index, part, requestUriParts[index])
-
 	if !strings.HasPrefix(part, ":") {
 	    continue;
 	}
@@ -127,30 +126,22 @@ func extractParams(routeUri, requestUri string) map[string]string {
 }
 
 func routeMatches(requestUri, route string) bool {
-	fmt.Printf("Check request uri: %s matches %s\n", requestUri, route)
 	requestUriParts := strings.Split(requestUri, "/")
 	routeUriParts := strings.Split(route, "/")
 
-	fmt.Printf("requestUriParts: %#v\n\n", requestUriParts)
-	fmt.Printf("routeUriParts: %#v\n\n", routeUriParts)
-
 	if len(requestUriParts) != len(routeUriParts) {
-	    fmt.Printf("lenght mismatch\n")
 	    return false
 	}
 
 	length := len(requestUriParts)
      
 	for i := range length {
-	    fmt.Printf("%d\n", i)
 	    if strings.HasPrefix(routeUriParts[i], ":") {
-		fmt.Printf("has prefix\n")
 		// wildcard
 		continue
 	    }
 
 	    if requestUriParts[i] != routeUriParts[i] {
-		fmt.Printf("mismatch route part %s && %s\n", routeUriParts[i], requestUriParts[i])
 		return false
 	    }
 	}
@@ -161,6 +152,7 @@ func routeMatches(requestUri, route string) bool {
 func CreateRouter(options ...func(*Router)) *Router {
     router := &Router{
 	reader: ReadFileReader{},
+	logger: Logger{},
     }
 
     for _, option := range options {
@@ -172,7 +164,24 @@ func CreateRouter(options ...func(*Router)) *Router {
 
 func startServer(host string, port int, router *Router) {
     serverHost := fmt.Sprintf("%s:%d", host, port)
-    fmt.Printf("%s\n\n", serverHost)
+    fmt.Printf(`
+	
+
+   █████████           ███████████                 █████                    █████   
+  ███░░░░░███         ░░███░░░░░███               ░░███                    ░░███    
+ ███     ░░░   ██████  ░███    ░███ █████ ████  ███████   ███████  ██████  ███████  
+░███          ███░░███ ░██████████ ░░███ ░███  ███░░███  ███░░███ ███░░███░░░███░   
+░███    █████░███ ░███ ░███░░░░░███ ░███ ░███ ░███ ░███ ░███ ░███░███████   ░███    
+░░███  ░░███ ░███ ░███ ░███    ░███ ░███ ░███ ░███ ░███ ░███ ░███░███░░░    ░███ ███
+ ░░█████████ ░░██████  ███████████  ░░████████░░████████░░███████░░██████   ░░█████ 
+  ░░░░░░░░░   ░░░░░░  ░░░░░░░░░░░    ░░░░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░     ░░░░░  
+                                                         ███ ░███                   
+                                                        ░░██████                    
+                                                         ░░░░░░                     
+`)
+    fmt.Printf("Started the server on: http://%s\n\n", serverHost)
+    
+    router.logger.PrintHeading()
     err := http.ListenAndServe(serverHost, router)
     panicOnErr(err)
 }
