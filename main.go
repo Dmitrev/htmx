@@ -18,13 +18,6 @@ import (
 
 const maxMemoryFormInBytes = 100 * 1024 * 1024
 
-const (
-	Reset  = "\033[0m"
-	Red    = "\033[31m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-)
 
 var renderer *templates.Renderer
 
@@ -50,6 +43,7 @@ func main() {
 func startWebServer() {
     d, err := sql.Open("mysql", "user:pass@tcp(localhost:3306)/database")
     db = d
+
 
     panicOnErr(err)
 
@@ -86,7 +80,6 @@ func startWebServer() {
 }
 
 func getRoot(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
 
     nav := getNav(r.Request.URL.Path)
     data := PageData{"Home", nav, nil, nil, nil}
@@ -94,7 +87,6 @@ func getRoot(w http.ResponseWriter, r RequestContext) {
 }
 
 func getTransactions(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
     repo := database.MakeTransactionRepo(db)
     accountRepo := database.MakeAccountRepo(db)
     transactions, err := repo.GetAllTransactions()
@@ -121,7 +113,6 @@ func getTransactions(w http.ResponseWriter, r RequestContext) {
 }
 
 func getAccounts(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
 
     nav := getNav(r.Request.URL.Path)
     data := PageData{"Accounts", nav, nil, nil, nil}
@@ -134,7 +125,6 @@ func getAccountsComponent(w http.ResponseWriter, r RequestContext) {
 	Accounts []*database.Account
 	CreateButton components.Button
     }
-    logRequest(r.Request)
     repo := database.MakeAccountRepo(db)
     accounts, err := repo.GetAllAccounts()
 
@@ -155,7 +145,6 @@ func getAccountsComponent(w http.ResponseWriter, r RequestContext) {
 }
 
 func createAccount(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
     r.Request.ParseForm()
 
     errors := make(map[string]string)
@@ -187,7 +176,6 @@ func createAccount(w http.ResponseWriter, r RequestContext) {
 }
 
 func deleteAccount(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
     id := strings.Split(r.Request.URL.Path, "/")[2]
 
     fmt.Printf("id: %s\n", id)
@@ -203,7 +191,6 @@ func deleteAccount(w http.ResponseWriter, r RequestContext) {
 }
 
 func showAccount(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
     id := strings.Split(r.Request.URL.Path, "/")[2]
 
     fmt.Printf("id: %s\n", id)
@@ -229,7 +216,6 @@ func getNav(path string) Nav {
 }
 
 func postStore(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
 
     r.Request.ParseForm()
     
@@ -244,7 +230,6 @@ func postStore(w http.ResponseWriter, r RequestContext) {
     }
 
     if len(errors) > 0 {
-	fmt.Println("validation errors")
 	// If has errors return form with errors
 	nav := getNav(r.Request.URL.Path)
 	data := PageData{"Page", nav, errors, nil, nil}
@@ -287,7 +272,6 @@ func truncate(w http.ResponseWriter, r RequestContext) {
 }
 
 func postImport(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
 
     err := r.Request.ParseMultipartForm(maxMemoryFormInBytes)
     if err != nil {
@@ -373,32 +357,7 @@ func postImport(w http.ResponseWriter, r RequestContext) {
     panicOnErr(err)
 }
 
-func logRequest(r *http.Request) {
-    _, err := fmt.Printf("[%s] %s%s%s %s\n", time.Now().Format(time.DateTime), Green, r.Method, Reset, r.URL.Path)
-
-    panicOnErr(err)
-
-    fmt.Println("--headers---")
-    for key, values := range r.Header {
-	fmt.Printf("%s: %v\n", key, values)		
-    }
-
-    if r.Method == "POST" {
-	err := r.ParseForm(); 
-	panicOnErr(err)
-    } 
-
-    fmt.Println("--body---")
-    for key, value := range r.PostForm {
-	fmt.Printf("%s: %v\n", key, value)		
-    }
-
-    fmt.Println("-----")
-}
-
 func deleteTransaction(w http.ResponseWriter, r RequestContext) {
-    logRequest(r.Request)
-
     id := strings.Split(r.Request.URL.Path, "/")[2]
 
     fmt.Printf("id: %s\n", id)
