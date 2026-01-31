@@ -15,6 +15,7 @@ func (reader FakeFileReader) ReadFile(filename string) ([]byte, error) {
 
 func TestGetRoute(t *testing.T) {
     expected := "Hello World"
+    
     handler := func (w http.ResponseWriter, r RequestContext) {
 	w.WriteHeader(200)
 	w.Write([]byte(expected))

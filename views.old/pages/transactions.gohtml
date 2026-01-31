@@ -1,8 +1,8 @@
-{{ define "content" }}
+{{ template "layout_start" . }}
 
 <div>
     <h1>Create new tranctions</h1>
-    {{ template "views/components/transaction-create-form.gohtml" . }}
+    {{ template "transaction-create-form" . }}
 </div>
 
 <div>
@@ -41,4 +41,4 @@
         </tbody>
     </table>
 </div>
-{{ end }}
+{{ template "layout_end" }}

@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-
 type FileReader interface {
     ReadFile(filename string) ([]byte, error)
 }

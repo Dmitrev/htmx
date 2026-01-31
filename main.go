@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 )
 
 const maxMemoryFormInBytes = 100 * 1024 * 1024
-
 
 var renderer *templates.Renderer
 
@@ -44,7 +44,6 @@ func startWebServer() {
     d, err := sql.Open("mysql", "user:pass@tcp(localhost:3306)/database")
     db = d
 
-
     panicOnErr(err)
 
     err = db.Ping()
@@ -52,6 +51,7 @@ func startWebServer() {
     router := CreateRouter()
     router.Get("/", getRoot)
     router.Get("/transactions", getTransactions)
+    router.Post("/transactions/create", createTransaction)
     router.Get("/accounts", getAccounts)
     router.Get("/accounts/:id", showAccount)
     router.Delete("/accounts/:id", deleteAccount)
@@ -82,8 +82,8 @@ func startWebServer() {
 func getRoot(w http.ResponseWriter, r RequestContext) {
 
     nav := getNav(r.Request.URL.Path)
-    data := PageData{"Home", nav, nil, nil, nil}
-    renderer.Render(w, "index.gohtml", data)
+    data := PageData{"Home", nav, nil, nil, nil, nil}
+    renderer.Render(w, "views/pages/index.gohtml", data)
 }
 
 func getTransactions(w http.ResponseWriter, r RequestContext) {
@@ -100,6 +100,7 @@ func getTransactions(w http.ResponseWriter, r RequestContext) {
 	nav,
 	nil,
 	nil,
+	nil,
 	struct {
 	    Transactions []*database.Transaction
 	    Accounts []*database.Account
@@ -109,15 +110,59 @@ func getTransactions(w http.ResponseWriter, r RequestContext) {
 	},
     }
 
-    renderer.Render(w, "transactions.gohtml", data)
+    renderer.Render(w, "views/pages/transactions.gohtml", data)
+}
+
+func createTransaction(w http.ResponseWriter, r RequestContext) {
+    r.Request.ParseForm()
+    accountRepo := database.MakeAccountRepo(db)
+    accounts, err := accountRepo.GetAllAccounts()
+    panicOnErr(err)
+
+    values := make(map[string]string)
+    for key := range r.Request.Form {
+	values[key] = r.Request.PostFormValue(key)
+    }
+
+    fmt.Printf("%v\n", values);
+    errors := make(map[string]string)
+    amount, err := strconv.Atoi(r.Request.FormValue("amount"))
+    if err != nil {
+	errors["amount"] = "amount must be a number"
+    }
+
+    accountId, err := strconv.Atoi(r.Request.FormValue("account_id"))
+    if err != nil {
+	errors["account_id"] = "account_id must be a number"
+    }
+
+    repo := database.MakeTransactionRepo(db)
+    _, err = repo.CreateTransaction(amount, accountId)
+    panicOnErr(err)
+
+    nav := getNav(r.Request.URL.Path)
+    data := PageData{
+    	 "doesn't matter",
+	 nav,
+	 errors,
+	 values,
+	 nil,
+	 struct {
+	     Accounts []*database.Account
+	 } {
+	     Accounts: accounts,
+	 },
+     }
+
+    renderer.RenderComponent(w, "views/components/transaction-create-form.gohtml", data)
 }
 
 func getAccounts(w http.ResponseWriter, r RequestContext) {
 
     nav := getNav(r.Request.URL.Path)
-    data := PageData{"Accounts", nav, nil, nil, nil}
+    data := PageData{"Accounts", nav, nil, nil, nil, nil}
 
-    renderer.Render(w, "accounts.gohtml", data);
+    renderer.Render(w, "views/pages/accounts.gohtml", data);
 }
 
 func getAccountsComponent(w http.ResponseWriter, r RequestContext) {
@@ -167,7 +212,7 @@ func createAccount(w http.ResponseWriter, r RequestContext) {
     }
 
     nav := getNav(r.Request.URL.Path)
-    data := PageData{"Page", nav, errors, nil, nil}
+    data := PageData{"Page", nav, errors, nil, nil, nil}
 
     tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
     err := tmpl.ExecuteTemplate(w, "content", data)
@@ -232,7 +277,7 @@ func postStore(w http.ResponseWriter, r RequestContext) {
     if len(errors) > 0 {
 	// If has errors return form with errors
 	nav := getNav(r.Request.URL.Path)
-	data := PageData{"Page", nav, errors, nil, nil}
+	data := PageData{"Page", nav, errors, nil, nil, nil}
 	err := tmpl.ExecuteTemplate(w, "content", data)
 
 	panicOnErr(err)
@@ -351,7 +396,7 @@ func postImport(w http.ResponseWriter, r RequestContext) {
 
     w.Header().Add("HX-Trigger", "new-transactions")
 
-    data := PageData{"Page", nav, nil, messages, nil}
+    data := PageData{"Page", nav, nil, nil, messages, nil}
     err = tmpl.ExecuteTemplate(w, "content", data)
 
     panicOnErr(err)

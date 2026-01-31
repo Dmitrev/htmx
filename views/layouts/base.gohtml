@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HTMX test</title>
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+        <link rel="manifest" href="/site.webmanifest">
+        <link rel="stylesheet" href="/css/style.css">
+    </head>
+    <body hx-ext="response-targets" >
+        <nav class="main-nav">
+            <ul hx-boost="true">
+                {{range .Nav.Items}}
+                <li>
+                    <a href="{{.Url}}">{{.Label}}</a>
+                </li>
+                {{ end }}
+            </ul>
+        </nav>
+        <div id="content">
+            {{ template "content"  . }}
+        </div>
+        <script src="https://unpkg.com/htmx.org@2.0.1"></script>
+        <script src="https://unpkg.com/htmx-ext-response-targets@2.0.0/response-targets.js"></script>
+        <script defer src="https://unpkg.com/htmx.org@1.9.6"></script>
+        <!-- <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js" integrity="sha512-L0Shl7nXXzIlBSUUPpxrokqq4ojqgZFQczTYlGjzONGTDAcLremjwaWv5A+EDLnxhQzY5xUZPWLOLqYRkY0Cbw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+        <script src="/js/script.js"></script>
+    </body>
+</html>

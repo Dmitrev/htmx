@@ -1,0 +1,16 @@
+{{ define "transaction-create-form" }}
+<div id="create-transaction-form">
+    {{ range .Errors }}
+        <p>{{ . }} </p>
+    {{ end }}
+    <form>
+        <input type="number" name="amount" />
+        <select name="account_id">
+            {{ range .Content.Accounts }}
+            <option value="">{{.Name}}</option>
+            {{ end }}
+        </select>
+        <button hx-post="/transactions/create" hx-target="#create-transaction-form">Create</button>
+    </form>
+</div>
+{{ end }}

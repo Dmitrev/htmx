@@ -15,8 +15,9 @@ type PageData struct {
     Title string
     Nav Nav
     Errors map[string]string
+    Values map[string]string
     Messages map[string]string
-    Content interface{}
+    Content any
 }
 
 type Nav struct {

@@ -7,7 +7,8 @@ import (
 )
 
 type Transaction struct {
-    Id int
+    Id int64
+    AccountId int
     Amount int
     Date string
     Description string
@@ -37,6 +38,7 @@ func MakeTransactionRepo(db *sql.DB) TransactionRepo {
 func (t *TransactionRepo) GetAllTransactions() ([]*Transaction, error) {
     rows, err := t.db.Query(`SELECT 
 	    id,
+	    account_id,
 	    amount,
 	    date,
 	    description,
@@ -57,12 +59,13 @@ func (t *TransactionRepo) GetAllTransactions() ([]*Transaction, error) {
     total := 0
 
     for rows.Next() {
-	var id int
+	var id int64
+	var accountId int
 	var amount int
 	var date, description string
 	var payee, address, category, createdAt, updatedAt sql.NullString
 
-	err := rows.Scan(&id, &amount, &date, &description, &payee, &address, &category, &createdAt, &updatedAt)
+	err := rows.Scan(&id, &accountId, &amount, &date, &description, &payee, &address, &category, &createdAt, &updatedAt)
 	if err != nil {
 	    return nil, err
 	}
@@ -97,6 +100,7 @@ func (t *TransactionRepo) GetAllTransactions() ([]*Transaction, error) {
 
 	t := &Transaction{
 	    id, 
+	    accountId, 
 	    amount, 
 	    date, 
 	    description,
@@ -111,4 +115,28 @@ func (t *TransactionRepo) GetAllTransactions() ([]*Transaction, error) {
     }
 
     return transactions, nil
+}
+
+func (t *TransactionRepo) CreateTransaction(amount, accountId int) (*Transaction, error)  {
+    stmt, err := t.db.Prepare("INSERT INTO transactions (amount, account_id) VALUES (?, ?)")
+    if err != nil {
+	return nil, err
+    }
+
+    result, err := stmt.Exec(amount, accountId) 
+
+    if err != nil {
+	return nil, err
+    }
+
+    lastId, err := result.LastInsertId()
+
+    fmt.Printf("Last inserted id: %d", lastId)
+
+    return &Transaction{
+	Id: lastId,
+	Amount:amount,
+	AccountId: accountId,
+    }, nil
+
 }

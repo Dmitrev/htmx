@@ -1,4 +1,4 @@
-{{ define "content" }}
+{{ template "layout_start" . }}
 
 <div id="top">
     <div id="error"></div>
@@ -37,4 +37,4 @@
     <div id="component-list" hx-get="/component/accounts" hx-trigger="load, new-accounts from:body"></div> 
 </div>
 
-{{ end }}
+{{ template "layout_end" . }}
