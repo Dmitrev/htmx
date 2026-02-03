@@ -2,39 +2,7 @@
 
 <div id="top">
     <div id="error"></div>
-    <form 
-        id="create-transaction"
-        hx-target="#top"
-        hx-swap="outerHTML"
-        hx-target-error="#error"
-        hx-post="/accounts" 
-        
-    >
-        <div>
-            <div>
-                <label>name</label>
-                <input 
-                    hx-preserve="true" 
-                    id="name" 
-                    type="text" 
-                    name="name" 
-                    
-                />
-                {{with .Errors.name}}
-                    <span>{{.}}</span>
-                {{end}}
-            </div>
-        </div>
-        <div>
-            <button 
-                type="submit" 
-                
-            >
-                Create account
-            </button>
-        </div>
-    </form>
-    <div id="component-list" hx-get="/component/accounts" hx-trigger="load, new-accounts from:body"></div> 
+    {{ template "views/components/account-create-form.gohtml" }} 
 </div>
-
+<div id="component-list" hx-get="/component/accounts" hx-trigger="load, new-accounts from:body"></div> 
 {{ end }}

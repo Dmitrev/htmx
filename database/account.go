@@ -18,14 +18,14 @@ func MakeAccountRepo(db *sql.DB) AccountRepo {
     return AccountRepo{db: db}
 }
 
-func (r *AccountRepo) CreateAccount(name string) (*Account, error) {
-    stmt, err := r.db.Prepare("INSERT INTO accounts (name) VALUES (?)")
+func (r *AccountRepo) CreateAccount(name string, startingBalance int) (*Account, error) {
+    stmt, err := r.db.Prepare("INSERT INTO accounts (name, starting_balance) VALUES (?, ?)")
 
     if err != nil {
 	return nil, err
     }
 
-    result, err := stmt.Exec(name)
+    result, err := stmt.Exec(name, startingBalance)
 
     if err != nil {
 	return nil, err

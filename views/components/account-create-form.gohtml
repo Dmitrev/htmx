@@ -1,0 +1,51 @@
+{{ define "views/components/account-create-form.gohtml" }}
+<div id="top">
+    {{with .Errors._server_error}}
+        <span>{{.}}</span>
+    {{end}}
+    <form 
+        id="create-transaction"
+        hx-target="#top"
+        hx-swap="outerHTML"
+        hx-target-error="#error"
+        hx-post="/accounts" 
+        
+    >
+        <div>
+            <div>
+                <label>Name</label>
+                <input 
+                    hx-preserve="true" 
+                    id="name" 
+                    type="text" 
+                    name="name" 
+                    
+                />
+                {{with .Errors.name}}
+                    <span>{{.}}</span>
+                {{end}}
+            </div>
+            <div>
+                <label>Starting Balance</label>
+                <input 
+                    hx-preserve="true" 
+                    id="starting_balance" 
+                    type="number" 
+                    name="starting_balance" 
+                    value="0"
+                />
+                {{with .Errors.starting_balance}}
+                    <span>{{.}}</span>
+                {{end}}
+            </div>
+        </div>
+        <div>
+            <button 
+                type="submit" 
+            >
+                Create account
+            </button>
+        </div>
+    </form>
+</div>
+{{ end }}

@@ -18,6 +18,7 @@ import (
 )
 
 const maxMemoryFormInBytes = 100 * 1024 * 1024
+const floatBitSize = 64
 
 var renderer *templates.Renderer
 
@@ -198,13 +199,27 @@ func createAccount(w http.ResponseWriter, r RequestContext) {
 	errors["name"] = "Missing name"
     }
 
+    if (!r.Request.Form.Has("starting_balance") || r.Request.Form.Get("starting_balance") == "") {
+	errors["starting_balance"] = "Missing starting balance"
+    }
+
+    startingBalance, err := strconv.ParseFloat(r.Request.Form.Get("starting_balance"), floatBitSize)
+
+    if err != nil {
+	errors["_server_error"] = "Unable to store starting balance"
+    }
+
     if len(errors) == 0 {
 	repo := database.MakeAccountRepo(db)
-	account, err := repo.CreateAccount(r.Request.Form.Get("name"))
+	_, err := repo.CreateAccount(
+	    r.Request.Form.Get("name"),
+	    int(startingBalance * 100),
+        )
 
-	panicOnErr(err)
-
-	fmt.Printf("%#v\n", account)
+	if err != nil {
+	    errors["_server_error"] = "unable to create account"
+	    fmt.Printf("Error creating account: %s\n", err)
+	}
     }
 
     if len(errors) == 0 {
@@ -212,12 +227,10 @@ func createAccount(w http.ResponseWriter, r RequestContext) {
     }
 
     nav := getNav(r.Request.URL.Path)
+
     data := PageData{"Page", nav, errors, nil, nil, nil}
-
-    tmpl := template.Must(template.ParseFiles("html/index.gohtml", "html/partials/accounts.gohtml"))
-    err := tmpl.ExecuteTemplate(w, "content", data)
-
-    panicOnErr(err)
+    
+    renderer.RenderComponent(w, "views/components/account-create-form.gohtml", data);
 }
 
 func deleteAccount(w http.ResponseWriter, r RequestContext) {
